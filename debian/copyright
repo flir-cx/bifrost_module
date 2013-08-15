@@ -1,0 +1,17 @@
+Format: http://dep.debian.net/deps/dep5
+Upstream-Name: maximal
+Source: <url://example.com>
+
+Files: *
+Copyright: 2013 Jonas Romfelt <jonas.romfelt@flir.se>
+           2013 Tommy Karlsson <tommy.karlsson@flir.se>
+           2013 Jonas Zetterberg <jonas.zetterberg@flir.se> 
+License: Copyright (c) 2013 FLIR Systems AB. All rights reserved.
+
+Files: debian/*
+Copyright: 2013 Jonas Romfelt <jonas.romfelt@flir.se>
+           2013 Tommy Karlsson <tommy.karlsson@flir.se>
+           2013 Jonas Zetterberg <jonas.zetterberg@flir.se> 
+Copyright: 2012 Jonas Zetterberg <jonas.zetterberg@flir.se>
+
+License: Copyright (c) 2013 FLIR Systems AB. All rights reserved.

@@ -1,0 +1,20 @@
+
+# End of pool in mb
+POOL_START=505
+POOL_SIZE=320
+
+# Align all pool sizes
+ALIGN=4096
+
+# POOL_# should contain number of buffer in POOL_#.
+# SIZE_# should container size of a buffer in POOL_#
+
+POOL_0=16
+SIZE_0=6220800
+
+POOL_1=32
+SIZE_1=4194304
+
+#POOL_1=1
+#SIZE_1=12345
+

@@ -1,0 +1,19 @@
+Source: heimdall-mods
+Section: main
+Priority: extra
+Maintainer: Jonas Zetterberg <jonas.zetterberg@flir.se>
+Build-Depends: debhelper (>= 8.0.0), dpkg-dev, build-essential, linux-kernel-source [armel], doxygen
+Standards-Version: 3.9.4
+Homepage: heimdall
+
+Package: heimdall-mods
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Modules for the heimdall platform
+ Modules for the heimdall maximal platform
+
+Package: heimdall-mods-dev
+Architecture: all
+Depends: heimdall-mods (= ${binary:Version})
+Description: development files for heimdall-mods
+ Development headers for modules for the heimdall maximal platform
