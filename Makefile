@@ -19,6 +19,9 @@ include $(foreach v,$(MODS),$(v)/Makefile)
 all:modules
 	@true
 
+prepare:
+	cd $(KERNDIR); make prepare modules_prepare -j10
+
 test:
 
 distclean:
