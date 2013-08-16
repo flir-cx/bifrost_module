@@ -19,3 +19,6 @@ export DH_OPTIONS
 
 %:
 	dh $@ --parallel 
+override_dh_auto_configure:
+	make prepare
+	dh_auto_configure

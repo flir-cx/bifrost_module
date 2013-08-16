@@ -20,7 +20,7 @@ all:modules
 	@true
 
 prepare:
-	cd $(KERNDIR); make prepare modules_prepare -j10
+	$(MAKE) -C $(KERNELDIR) prepare modules_prepare -j10
 
 test:
 
