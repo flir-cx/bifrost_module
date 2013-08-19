@@ -16,6 +16,10 @@
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
+override_dh_builddeb: 
+	dpkg-parsechangelog --show-field Version > debian.release
+	dh_builddeb
+
 
 %:
 	dh $@ --parallel 
