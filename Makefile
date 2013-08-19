@@ -32,7 +32,8 @@ EXT_FILES:=\
 	animal-i2c/animal-i2c.conf:/etc/modprobe.d \
 	bifrost/bifrost.conf:/etc/modprobe.d \
 	cmemk/cmemk.pools:/etc \
-	cmemk/cmemk_modopts:/sbin
+	cmemk/cmemk_modopts:/sbin \
+	flir_chardev_mod:/sbin
 
 _all::modules
 	@true

@@ -1,0 +1,26 @@
+#!/bin/sh -e
+
+export PATH=$PATH:/usr/bin
+
+_help()
+{
+	echo "Usage $0 modulename devicename <moduleoptions>"
+	exit 0
+}
+
+[ -n "$2" ] || _help
+
+mod="$1"
+shift
+
+dev="$1"
+shift
+
+modprobe --ignore-install $mod $@ || { echo "Could not load $mod"; exit 0; }
+major=$(grep "$dev\$" /proc/devices | cut -d ' ' -f 1)
+[ -n "$major" ] || { echo "Device $dev not found"; rmmod $mod; exit 0; }
+	
+! [ -c "/dev/$dev" ] || rm -f "/dev/$dev"
+mknod "/dev/$dev" c $major 0
+chgrp dialout "/dev/$dev"
+chmod 0664 "/dev/$dev"
