@@ -1,0 +1,72 @@
+#!/bin/sh -e
+
+export PATH=$PATH:/usr/bin
+
+CONFIG_FILE=/etc/cmemk.pools
+if ! [ -f "$CONFIG_FILE" ] ; then
+	echo "$CONFIG_FILE config file not found"
+	exit 1
+fi
+
+. $CONFIG_FILE
+
+# MEM_START, This is 0x80000000 in decimal.
+MEM_START=2147483648
+CMEM_START=$(( $POOL_START * 1024 * 1024 ))
+CMEM_END=$(( $CMEM_START + $POOL_SIZE * 1024 * 1024 ))
+
+### Print out cmem command line
+_gen_args()
+{
+	INFO=$1
+	TOT=0
+	C=0
+	POOLS="pools="
+	while true
+	do
+		# Get number of buffers in the pool
+		PS=$(( POOL_$C ))
+		if [ "$PS" = "0" ] ; then
+			# POOL not found, break out
+			break
+		fi
+		# Get size of each buffer
+		SZ=$((SIZE_$C))
+
+		# Make sure it is aligned
+		AL=$(($SZ % 4096))
+		if [ "$AL" != "0" ] ; then
+			SZ=$(($SZ + $ALIGN - $AL))
+		fi
+		
+		# Add a , between pools
+		if ! [ "$C" = "0" ] ; then
+			POOLS="$POOLS,"
+		fi
+		# Print pool name
+		POOLS="$POOLS$(printf "%dx%d" $PS $SZ)"
+
+		# Increase pool count
+		C=$(( $C + 1 ))
+	
+		# Increase total amount of used memory
+		TOT=$(( $TOT + $PS * $SZ ))
+	done
+
+	echo -n $POOLS
+	printf " phys_start=0x%08x phys_end=0x%08x\n" \
+		$(( $MEM_START + $CMEM_START )) \
+		$(( $MEM_START + $CMEM_END ))
+	if [ "$INFO" = "-i" ] ; then
+		FREE=$(($CMEM_END - $CMEM_START))
+		printf "Pool start at   : %3dM (%8d) phy=0x%08X\n" $(($CMEM_START / 1024 / 1024)) $CMEM_START $(($CMEM_START + $MEM_START))
+		printf "Pool ends at    : %3dM (%8d) phy=0x%08X\n" $(($CMEM_END / 1024 / 1024))   $CMEM_END   $(($CMEM_END + $MEM_START))
+		printf "Pool size       : %3dM (%8d) hex=0x%08X\n" $(($FREE / 1024 / 1024))       $FREE $FREE	
+		printf "Specified pools : %3dM (%8d) hex=0x%08X\n" $(($TOT / 1024 / 1024))        $TOT $TOT
+		FREE=$(($FREE - $TOT))
+		printf "Free pool memory: %3dM (%8d) hex=0x%08X\n" $(($FREE / 1024 / 1024))       $FREE $FREE
+	fi
+}
+
+_gen_args $1
+
