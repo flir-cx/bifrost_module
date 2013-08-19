@@ -9,6 +9,7 @@ Homepage: heimdall
 Package: heimdall-mods
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
+Replaces: maximal
 Description: Modules for the heimdall platform
  Modules for the heimdall maximal platform
 

@@ -1,3 +1,9 @@
+heimdall-mods (0.3.0) maximal; urgency=low
+
+  * Package split
+
+ -- Jonas Zetterberg <jonas.zetterberg@flir.se>  Mon, 19 Aug 2013 10:14:16 +0200
+
 heimdall-mods (0.0.1) unstable; urgency=low
 
   * Initial Release.
