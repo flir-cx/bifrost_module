@@ -1,0 +1,16 @@
+#!/bin/sh
+
+_remove_module()
+{
+	mod=$1
+	temp=$(tempfile)
+	grep -v "^$1$" /etc/modules > $temp
+	mv $temp /etc/modules
+}
+
+_remove_module bifrost
+_remove_module cmemk
+_remove_module animal-i2c
+
+#DEBHELPER#
+

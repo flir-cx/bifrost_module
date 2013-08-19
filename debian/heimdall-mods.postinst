@@ -1,0 +1,19 @@
+#!/bin/sh
+
+_add_module()
+{
+	! grep "^$1$" /etc/modules || return 0
+	echo $1 >> /etc/modules
+}
+
+_add_module cmemk
+_add_module bifrost
+_add_module animal-i2c
+
+#DEBHELPER#
+
+# remove old init files if they exists (this is very old now, remove these when you see these)
+! [ -e /etc/init.d/cmemk.init ] || rm /etc/init.d/cmemk.init
+! [ -e /etc/init.d/animal-i2c.init ] || rm /etc/init.d/animal-i2c.init
+! [ -e /etc/init.d/bifrost.init ] || rm /etc/init.d/bifrost.init
+
