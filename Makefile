@@ -1,22 +1,40 @@
 # Link to latest build-system if available in top dir 
 $(shell ( ! [ -d ../maxmake ] || [ -h maxmake ] ) || ln -s ../maxmake maxmake )
 
-include maxmake/env.mk
 
-NAME=modules
+NAME:=modules
+VER_MAJOR:=0
+VER_MINOR:=0
+VER_PATCH:=1
+
+include maxmake/env.mk
+include maxmake/defrules.mk
+include maxmake/inst_t.mk
+
 MODS=cmemk animal-i2c bifrost
-GOALS=clean help modules 
+GOALS=_clean modules 
 
 KMFLAGS:=$(KMFLAGS) -C $(KERNELDIR)
 ifneq ($(ARCH), $(BLDARCH))
   KMFLAGS:=$(KMFLAGS) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE)
 endif
 
-# Include kernel makefiles for headers and such
-include $(foreach v,$(MODS),$(v)/Makefile)
 
+# Kernel header files to install
+HDR_FILES:=$(HDR_FILES) cmemk/cmemk.h \
+	animal-i2c/i2c_usim.h animal-i2c/animal-i2c_api.h \
+	bifrost/bifrost_api.h  \
+	$(shell find bifrost -name 'fpga_*.h' -printf 'bifrost/%P ') \
+	$(shell find bifrost -name 'valhalla_*.h' -printf 'bifrost/%P ')
 
-all:modules
+EXT_FILES:=\
+	cmemk/cmemk.conf:/etc/modprobe.d \
+	animal-i2c/animal-i2c.conf:/etc/modprobe.d \
+	bifrost/bifrost.conf:/etc/modprobe.d \
+	cmemk/cmemk.pools:/etc \
+	cmemk/cmemk_modopts:/sbin
+
+_all::modules
 	@true
 
 prepare:
@@ -24,17 +42,14 @@ prepare:
 
 test:
 
-distclean:
+_distclean::
 	@$(MAKE) -C . clean
 
-include maxmake/inst_t.mk
 
-.PHONY:$(GOALS)
-$(GOALS): $(foreach v,$(MODS),mod-$(v))
+$(GOALS):: $(foreach v,$(MODS),mod-$(v))
 	$(ECHO) "DONE : modules $(MAKECMDGOALS)"
 
-.PHONY:install
-install: $(foreach v,$(MODS),inst-$(v)) install-dev
+_install:: $(foreach v,$(MODS),inst-$(v)) install-dev
 	$(ECHO) "DONE : modules install"
 
 uninstall:

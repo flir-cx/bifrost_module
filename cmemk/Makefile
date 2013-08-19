@@ -1,6 +1,5 @@
 
-# Kernel header files to install
-HDR_FILES:=$(HDR_FILES) cmemk/cmemk.h
+
 
 # This is the kernel based makefile for the module
 
