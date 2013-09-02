@@ -50,13 +50,14 @@ _distclean::
 $(GOALS):: $(foreach v,$(MODS),mod-$(v))
 	$(ECHO) "DONE : modules $(MAKECMDGOALS)"
 
-_install:: $(foreach v,$(MODS),inst-$(v)) install-dev
+_installrel:: $(foreach v,$(MODS),inst-$(v))
 	$(ECHO) "DONE : modules install"
 
-uninstall:
 
-install-dev:
+_installdev::
 	$_ $(call INSTALL,$(HDR_FILES),$(INCDIR))
+
+uninstall:
 
 inst-%::
 	+$_ exec $(MAKE) $(KMFLAGS) M=$(shell pwd)/$* INSTALL_MOD_PATH=$(DESTDIR) modules_install
