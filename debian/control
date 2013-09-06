@@ -2,7 +2,7 @@ Source: heimdall-mods
 Section: main
 Priority: extra
 Maintainer: Jonas Zetterberg <jonas.zetterberg@flir.se>
-Build-Depends: debhelper (>= 8.0.0), dpkg-dev, build-essential, linux-kernel-source [armel], maxmake
+Build-Depends: debhelper (>= 8.0.0), dpkg-dev, build-essential, linux-kernel-source [armel], maxmake, gcc, make
 Standards-Version: 3.9.4
 Homepage: heimdall
 
