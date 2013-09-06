@@ -1,3 +1,9 @@
+heimdall-mods (0.3.1) maximal; urgency=low
+
+  * Update deps and make system 
+
+ -- Jonas Zetterberg <jonas.zetterberg@flir.se>  Thu, 05 Sep 2013 16:37:42 +0000
+
 heimdall-mods (0.3.0) maximal; urgency=low
 
   * Package split
