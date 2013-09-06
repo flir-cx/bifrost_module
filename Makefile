@@ -12,7 +12,7 @@ include maxmake/defrules.mk
 include maxmake/inst_t.mk
 
 MODS=cmemk animal-i2c bifrost
-GOALS=_clean modules 
+GOALS=modules 
 
 KMFLAGS:=$(KMFLAGS) -C $(KERNELDIR)
 ifneq ($(ARCH), $(BLDARCH))
@@ -43,7 +43,7 @@ prepare:
 
 test:
 
-_distclean::
+_distclean:: $(foreach v,$(MODS),clean-$(v))
 	@$(MAKE) -C . clean
 
 
@@ -61,6 +61,9 @@ uninstall:
 
 inst-%::
 	+$_ exec $(MAKE) $(KMFLAGS) M=$(shell pwd)/$* INSTALL_MOD_PATH=$(DESTDIR) modules_install
+
+clean-%::
+	+$_ exec $(MAKE) $(KMFLAGS) M=$(shell pwd)/$* clean
 
 
 mod-%::
