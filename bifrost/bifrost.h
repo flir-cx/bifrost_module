@@ -14,7 +14,6 @@
 #define BIFROST_H_
 
 #include <linux/cdev.h>
-#include <linux/fb.h>
 #include <linux/fs.h>
 #include <linux/list.h>
 #include <linux/sched.h>
@@ -33,7 +32,6 @@
  */
 
 #define BIFROST_DEVICE_NAME "bifrost"
-#define BIFROST_FRAMEBUFFER_NAME "bifrost fb"
 
 #define BIFROST_VERSION_MAJOR 0
 #define BIFROST_VERSION_MINOR 1
@@ -166,14 +164,11 @@ struct bifrost_device {
         int cdev_initialized;           /* set when cdev has been initialized */
         struct cdev cdev;               /* char device structure */
         struct proc_dir_entry *proc;    /* proc fs entry */
-        struct fb_info *fb_info;        /* frame buffer struct */
-        int fb_id;                      /* frame buffer number X, e.g. /dev/fbX */
         struct pci_dev *pdev;           /* PCI device structure */
         int irq;                        /* PCIe MSI interrupt line */
         struct timers timers;           /* timers */
         struct device_memory regb[6];   /* FPGA register bank (PCIe => max 6 BARs) */
         struct device_memory ddr;       /* FPGA DDR memory */
-        struct dma_buffer overlay;      /* overlay graphics, exported via frame buffer interface */
         struct dma_buffer scratch;      /* general DMA'able scratch buffer */
         struct dma_status dma_status;
 
@@ -215,8 +210,6 @@ int bifrost_pci_probe_post_init(struct pci_dev *pdev);
 
 int bifrost_pci_init(struct bifrost_device *dev);
 void bifrost_pci_exit(struct bifrost_device *dev);
-int bifrost_fb_init(struct bifrost_device *dev);
-void bifrost_fb_exit(struct bifrost_device *dev);
 int bifrost_cdev_init(struct bifrost_device *dev);
 void bifrost_cdev_exit(struct bifrost_device *dev);
 

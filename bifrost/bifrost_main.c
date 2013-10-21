@@ -137,20 +137,6 @@ static int bifrost_procfs_read(char *page, char **start, off_t offset,
                         dev->stats.llseeks,
                         dev->stats.procfsreads);
 
-        if (dev->fb_info)
-                len += snprintf(&page[len], page_size - len,
-                                "Frame buffer number      : %d\n"
-                                "xres x yres x bpp        : %d x %d x %d\n"
-                                "Line-length (bytes)      : %d\n",
-                                dev->fb_id,
-                                dev->fb_info->var.xres,
-                                dev->fb_info->var.yres,
-                                dev->fb_info->var.bits_per_pixel,
-                                dev->fb_info->fix.line_length);
-        else
-                len += snprintf(&page[len], page_size - len,
-                                "Frame buffer not initialized\n");
-
 #ifdef BIFROST_INTERRUPT_TRACE
         bifrost_trace_interrupts();
 #endif
@@ -295,34 +281,18 @@ int bifrost_pci_probe_post_init(struct pci_dev *pdev)
          * here. When there is real PCI hardware the memory is allocated in PCI
          * probe function.
          */
-
-        /*
-         * rc = bdev->ops->alloc_dma_buffer(bdev->overlay,
-         *                                        1024 * 576 * 4, pdev);
-         * if (rc != 0) {
-         *        ALERT("Allocating overlay frame buffer memory failed\n");
-         *        goto err_alloc;
-         * }
-         */
         rc = bdev->ops->alloc_dma_buffer(&bdev->scratch, 1024 * 4, pdev);
         if (rc != 0) {
                 ALERT("Allocating scratch buffer memory failed\n");
                 goto err_alloc;
         }
 
-        if (bifrost_fb_init(bdev) != 0)
-                goto err_fb;
-
         if (bifrost_cdev_init(bdev) != 0)
-                goto err_cdev;
+		goto err_alloc;
 
         return 0;
 
-  err_cdev:
-        bifrost_fb_exit(bdev);
-  err_fb:
   err_alloc:
-        /*bdev->ops->free_dma_buffer(bdev->overlay);*/
         bdev->ops->free_dma_buffer(&bdev->scratch);
         bifrost_dma_cleanup(bdev);
   err_dma:
@@ -469,8 +439,6 @@ static void __exit bifrost_exit(void)
 
         remove_proc_entry(BIFROST_DEVICE_NAME, NULL);
         bifrost_cdev_exit(bdev);
-        /* bdev->ops->free_dma_buffer(bdev->overlay); */
-        bifrost_fb_exit(bdev);
         bdev->ops->free_dma_buffer(&bdev->scratch);
         bifrost_dma_cleanup(bdev);
         bifrost_detach_msis();
