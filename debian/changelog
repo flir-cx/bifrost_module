@@ -1,3 +1,10 @@
+heimdall-mods (0.3.2) maximal; urgency=low
+
+  * Add fan, overlay control and some refactoring
+  * Remove framebuffer
+
+ -- Jonas Zetterberg <jonas.zetterberg@flir.se>  Mon, 04 Nov 2013 09:01:04 +0000
+
 heimdall-mods (0.3.1) maximal; urgency=low
 
   * Update deps and make system 
