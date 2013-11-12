@@ -67,12 +67,7 @@
 #define VALHALLA_ADE_ADJ_MODE_MANUAL            0x2
 #define VALHALLA_ADE_ADJ_MODE_ONESHOT           0x3
 
-/* FIXME: Old values, Stefan is unsure which one should be correct. For now the 
- * defined values correspond to the FPGA implementation but have lower granularity
- * then the previously defined.
- */
-//#define VALHALLA_ADE_ADJ_MAN_GAIN_MAX           (65535 / 2)
-//#define VALHALLA_ADE_ADJ_MAN_OFFSET_MAX         (65535 / 2)
+/* 13-bits signed */
 #define VALHALLA_ADE_ADJ_MAN_GAIN_MAX           (0x1FFF >> 1)
 #define VALHALLA_ADE_ADJ_MAN_OFFSET_MAX         (0x1FFF >> 1)
 
