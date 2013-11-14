@@ -1,5 +1,5 @@
 # Include the common Doxygen configuration first. Override parameters below.
-@INCLUDE               = ../include.doxy
+@INCLUDE               = ../../include.doxy
 
 PROJECT_NAME           = Bifrost
 GENERATE_TAGFILE       = ./docs/bifrost.tag

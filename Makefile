@@ -12,6 +12,7 @@ include maxmake/defrules.mk
 include maxmake/inst_t.mk
 
 MODS=cmemk animal-i2c bifrost
+DOCS=bifrost
 GOALS=modules 
 
 KMFLAGS:=$(KMFLAGS) -C $(KERNELDIR)
@@ -69,3 +70,12 @@ clean-%::
 mod-%::
 	$(ECHO) " MOD : $* $(MAKECMDGOALS)"
 	+$_ exec $(MAKE) $(KMFLAGS) M=$(shell pwd)/$* $(MAKECMDGOALS)
+
+
+_doc:: $(foreach dir, $(DOCS), doxygen-$(dir))
+	@true
+
+doxygen-%::
+	$(ECHO) -n " " $(NAME)/$* " DOC : "
+	$_ cd $* && doxygen > doxygen.log 2>&1
+	$(ECHO) "$$(cat $*/doxygen.log | grep -i 'Warning:' | wc -l) Warnings, $$(cat $*/doxygen.log | grep -i 'Error:' | wc -l) Errors"
