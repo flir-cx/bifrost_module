@@ -3,7 +3,7 @@
  *
  * valhalla_vman.h
  *
- *  Created on: Nov 11, 2012
+ *  Created on: Nov 11, 2013
  *      Author: Jonas Lundberg <jonas.lundberg@flir.se>
  *
  * Register map for FPGA Valhalla Video Management block.
