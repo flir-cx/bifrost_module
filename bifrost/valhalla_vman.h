@@ -1,7 +1,7 @@
 /*
  * Copyright (c) FLIR Systems AB. All rights reserved.
  *
- * valhalla_video_management.h
+ * valhalla_vman.h
  *
  *  Created on: Nov 11, 2012
  *      Author: Jonas Lundberg <jonas.lundberg@flir.se>
@@ -15,7 +15,7 @@
 
 namespace VALHALLA_VMAN
 {
-    uint32_t      ADDR_BASE                       =  0x00001100;
+    uint32_t      BASE_ADDRESS                    =  0x00001100;
 
     /** relative unit base offset to SYSTEM SYNC control register */
     uint32_t      SYSTEM_SYNC_CONTROL_OFFSET      =  0x0010;
