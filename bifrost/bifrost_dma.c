@@ -86,7 +86,8 @@ static int lookup_chan(struct dma_ctl *ctl, int irq)
         return -EINVAL;
 }
 
-struct dma_ctl *alloc_dma_ctl(int num_ch, dma_xfer_t xfer, void *data)
+struct dma_ctl *alloc_dma_ctl(int num_ch, int idle_map, dma_xfer_t xfer,
+			void *data)
 {
         struct dma_ctl *ctl;
 
@@ -96,11 +97,14 @@ struct dma_ctl *alloc_dma_ctl(int num_ch, dma_xfer_t xfer, void *data)
 
         num_ch = min(num_ch, MAX_DMA_CHANNELS);
         ctl->num_ch = num_ch;
-        ctl->idle_bitmap = (1 << num_ch) - 1;
+        ctl->idle_bitmap = idle_map;
         ctl->start_xfer = xfer;
         ctl->data = data;
         INIT_LIST_HEAD(&ctl->list);
 	spin_lock_init(&ctl->lock);
+
+	printk("bifrost: DMA channels = %d, DMA idle map = %x\n",
+		num_ch, idle_map);
 
         return ctl;
 }

@@ -24,7 +24,8 @@ struct dma_req {
 struct dma_ch;
 struct dma_ctl;
 
-extern struct dma_ctl *alloc_dma_ctl(int num_ch, dma_xfer_t xfer, void *data);
+extern struct dma_ctl *alloc_dma_ctl(int num_ch, int idle_map, dma_xfer_t xfer,
+				void *data);
 extern void free_dma_ctl(struct dma_ctl *ctl);
 
 extern void enable_dma_ch(struct dma_ctl *ctl, int ch, int irq);

@@ -26,6 +26,7 @@
 #include "bifrost.h"
 #include "bifrost_dma.h"
 #include "valhalla_msi.h"
+#include "valhalla_dma.h"
 
 extern void bifrost_dma_chan_start(void *data, u32 ch, u32 src, u32 dst,
                                    u32 len, u32 dir);
@@ -169,10 +170,23 @@ void bifrost_detach_msis(void)
 
 int bifrost_dma_init(int irq, struct bifrost_device *dev)
 {
-        int n, num_ch;
+        int n, num_ch, idle_map;
 
-        num_ch = (dev->info.simulator) ? 1 : 8;
-        dev->dma_ctl = alloc_dma_ctl(num_ch, bifrost_dma_chan_start, dev);
+	if (dev->info.simulator) {
+		num_ch = 1;
+		idle_map = 1;
+	} else {
+		struct device_memory *mem = &dev->regb[0];
+		u32 val;
+
+		mem->rd(mem->handle, VALHALLA_ADDR_DMA_CAPABILITY, &val);
+		num_ch = val & 0xf;
+
+		mem->rd(mem->handle, VALHALLA_ADDR_DMA_STATUS, &val);
+		idle_map = ~val & ((1 << num_ch) - 1);
+	}
+        dev->dma_ctl = alloc_dma_ctl(num_ch, idle_map, bifrost_dma_chan_start,
+				dev);
         if (dev->dma_ctl == NULL)
                 return -ENOMEM;
 
@@ -328,7 +342,6 @@ static int pcie_set_ext_tag(struct pci_dev *dev)
 
         if (!(ctl & PCI_EXP_DEVCTL_EXT_TAG)) {
                 ctl |= PCI_EXP_DEVCTL_EXT_TAG;
-                printk("Set PCIe extended tag (%hx)\n", ctl);
                 err = pci_write_config_dword(dev, cap + PCI_EXP_DEVCTL, ctl);
         }
 
@@ -370,7 +383,7 @@ static void init_device_memory(struct pci_dev *pci, int n,
                                struct device_memory *mem)
 {
         memset(mem, 0, sizeof(*mem));
-        
+
         mem->bar = n;
         mem->pdev = pci;
         mem->addr_bus = pci_resource_start(pci, n);
@@ -391,7 +404,7 @@ static int map_device_memory(struct device_memory *mem)
         mem->addr = pci_iomap(mem->pdev, mem->bar, mem->size);
         if (mem->addr == NULL) {
                 ALERT("Map BAR%d region failed (%08lx - %08lx\n",
-                      mem->bar, mem->addr_bus, mem->addr_bus + mem-> size - 1);                
+                      mem->bar, mem->addr_bus, mem->addr_bus + mem-> size - 1);
                 return -EFAULT;
         }
 
@@ -408,7 +421,7 @@ static void unmap_device_memory(struct device_memory *mem)
 {
         if (mem->enabled)
                 pci_iounmap(mem->pdev, mem->addr);
-        
+
         mem->enabled = 0;
 }
 
@@ -422,8 +435,8 @@ static int setup_io_regions(struct bifrost_device *bifrost,
                 if (map_device_memory(&bifrost->regb[n]) == 0)
                         nbars++;
         }
-        
-        return nbars; 
+
+        return nbars;
 }
 
 static void remove_io_regions(struct bifrost_device *bifrost)
