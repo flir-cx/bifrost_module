@@ -1,9 +1,16 @@
+heimdall-mods (0.3.3) maximal; urgency=low
+
+  * Bifrost DMA driver reads number of available channels from FPGA
+
+ -- Tommy Karlsson <tommy.karlsson@flir.se>  Wed, 20 Nov 2013 14:44:30 +0100
+
 heimdall-mods (0.3.2) maximal; urgency=low
 
+  [ Jonas Zetterberg ]
   * Add fan, overlay control and some refactoring
   * Remove framebuffer
 
- -- Jonas Zetterberg <jonas.zetterberg@flir.se>  Mon, 04 Nov 2013 09:01:04 +0000
+ -- Tommy Karlsson <tommy.karlsson@flir.se>  Wed, 20 Nov 2013 13:39:20 +0000
 
 heimdall-mods (0.3.1) maximal; urgency=low
 
