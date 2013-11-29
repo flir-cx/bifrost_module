@@ -1,8 +1,14 @@
+heimdall-mods (0.3.4) maximal; urgency=low
+
+  * New release
+
+ -- Tommy Karlsson <tommy.karlsson@flir.se>  Fri, 29 Nov 2013 09:09:50 +0000
+
 heimdall-mods (0.3.3) maximal; urgency=low
 
   * Bifrost DMA driver reads number of available channels from FPGA
 
- -- Tommy Karlsson <tommy.karlsson@flir.se>  Wed, 20 Nov 2013 14:44:30 +0100
+ -- Tommy Karlsson <tommy.karlsson@flir.se>  Fri, 29 Nov 2013 08:07:39 +0000
 
 heimdall-mods (0.3.2) maximal; urgency=low
 
