@@ -17,6 +17,8 @@
 
 #define VALHALLA_ADDR_ADE_REG_BASE              (VALHALLA_ADDR_MATLAB_REG_BASE + 0x00000400)
 
+#define VALHALLA_ADE_COMPATIBLE_API_VER         2
+
 /*
  * ROI
  *
@@ -36,10 +38,11 @@
  */
 
 #define VALHALLA_ADDR_ADE_OUT_MUX_SELECT        0x0110
-#define VALHALLA_ADDR_ADE_LP_GAIN               0x0130
-#define VALHALLA_ADDR_ADE_HP_GAIN               0x0154
+#define VALHALLA_ADDR_ADE_SPAT_GAIN             0x0130
+#define VALHALLA_ADDR_ADE_DNR_GAIN              0x0134
+#define VALHALLA_ADDR_ADE_RAD_GAIN              0x0154
+#define VALHALLA_ADDR_ADE_ENT_GAIN              0x0118
 #define VALHALLA_ADDR_ADE_STREAM_SELECT         0x0148
-#define VALHALLA_ADDR_ADE_THRESHOLD             0x0118
 
 #define VALHALLA_ADE_OUT_MUX_SELECT_OUTPUT      0x00000000
 #define VALHALLA_ADE_OUT_MUX_SELECT_ALP_H       0x00000003
@@ -51,8 +54,6 @@
 #define VALHALLA_ADE_STREAM_SELECT_BYPASS       0x00000000
 #define VALHALLA_ADE_STREAM_SELECT_LOWPASS      0x00000001
 
-#define VALHALLA_ADE_GAIN_MAX                   0x0000ffff
-#define VALHALLA_ADE_THRESHOLD_MAX              0x0000ffff
 
 /*
  * ADJ
@@ -83,13 +84,11 @@
 #define VALHALLA_ADDR_ADE_LOW_BIN               0x0140 /* head bin */
 #define VALHALLA_ADDR_ADE_HIGH_BIN              0x0144 /* tail bin */
 
-#define VALHALLA_ADDR_ADE_HIST_ADD_LUT          0x2400 /* start of 8-bit LUT */
 #define VALHALLA_ADDR_ADE_HISTOGRAM             0x3c00 /* start of HIST */
 
-#define VALHALLA_ADE_HIST_ADD_LUT_DEPTH         256
 #define VALHALLA_ADE_HISTOGRAM_BINS             4096
-#define VALHALLA_ADE_BIN_LIMIT_MAX              65535
-#define VALHALLA_ADE_PREV_ALPHA_VALUE_MAX       4096
+#define VALHALLA_ADE_BIN_LIMIT_MAX              0xffff
+#define VALHALLA_ADE_PREV_ALPHA_VALUE_MAX       0xfff
 #define VALHALLA_ADE_MAX_BIN_VAL_MAX            0xffffffff
 
 /*
@@ -115,12 +114,10 @@
  * ADD
  */
 
-#define VALHALLA_ADDR_ADE_DET_GAIN              0x014C /* amount of detail gain */
-#define VALHALLA_ADDR_ADE_DET_GAIN_MAX          0x0114 /* 0 - 65535 */
-#define VALHALLA_ADDR_ADE_DET_GAIN_MIN          0x0178 /* 0 - 65535 */
-#define VALHALLA_ADDR_ADE_ADD_LUT               0x2800 /* start of 16-bit LUT */
+#define VALHALLA_ADDR_ADE_DET_GAIN              0x014C
+#define VALHALLA_ADDR_ADE_DET_DNR_GAIN          0x0198
+#define VALHALLA_ADDR_ADE_SCENE_GAIN_MAX        0x0194
 
-#define VALHALLA_ADE_ADD_LUT_DEPTH              1024
 #define VALHALLA_ADE_DET_GAIN_MAX               65535
 
 #endif
