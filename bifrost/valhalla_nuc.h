@@ -24,6 +24,7 @@
 #define VALHALLA_NUC_CONTROL_START_NUC              (1 << 0)
 #define VALHALLA_NUC_CONTROL_MEDIAN                 (1 << 1) // median filtering (used in optic NUC)
 #define VALHALLA_NUC_CONTROL_LOWPASS                (1 << 2) // low pass filtering
+#define VALHALLA_NUC_CONTROL_AVERAGE                (1 << 3) // average frame calculation only
 #define VALHALLA_NUC_CONTROL_NUMBER_FRAMES_SHIFT    4
 #define VALHALLA_NUC_CONTROL_NUMBER_FRAMES_MASK     (0x7 << (VALHALLA_NUC_CONTROL_NUMBER_FRAMES_SHIFT))
 
