@@ -1,8 +1,15 @@
+heimdall-mods (0.3.6) hdc; urgency=low
+
+  * hdc-1.0-rc1
+
+ -- Jenkins <jenkins@heimdall2.zone2.flir.net>  Mon, 13 Jan 2014 11:01:59 +0100
+
 heimdall-mods (0.3.5) lirc2; urgency=low
 
+  [ Jenkins ]
   * lirc2-1.0-rc1
 
- -- Jenkins <jenkins@heimdall2.zone2.flir.net>  Fri, 10 Jan 2014 14:21:01 +0100
+ -- root <jenkins@heimdall2.zone2.flir.net>  Fri, 10 Jan 2014 13:25:04 +0000
 
 heimdall-mods (0.3.4) maximal; urgency=low
 
