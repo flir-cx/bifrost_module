@@ -15,16 +15,19 @@
 
 namespace VALHALLA_ARNF
 {
-//    const uint32_t      BASE_ADDRESS              =  0x0000????;
+    const uint32_t      BASE_ADDRESS              = 0x00008600;
 
+    const uint32_t      CONTROL1_OFFSET           = 0x0010;
+    const uint32_t      OUT_MUX_MASK              = 0x000F;
+    const uint_fast8_t  OUT_MUX_SHIFT             = 0;
 
-/*
-    const uint32_t      CONTROL1_OFFSET             = 0x0020;      ///< offset relative to unit base address
-    const uint32_t      VIDEO_ROWS_MASK             = (0xFFFF << 16);
-    const uint_fast8_t  VIDEO_ROWS_SHIFT            = 16;
-    const uint32_t      VIDEO_COLUMNS_MASK          = (0xFFFF << 0);
-    const uint_fast8_t  VIDEO_COLUMNS_SHIFT         = 0;
-*/
+    const uint32_t      NFTEMP_OFFSET             = 0x0014;
+    const uint32_t      NFTEMP_MASK               = 0xFFFF;
+    const uint_fast8_t  NFTEMP_SHIFT              = 0;
+
+    const uint32_t      NFSPAT_OFFSET             = 0x001C;
+    const uint32_t      NFSPAT_MASK               = 0xFFFF;
+    const uint_fast8_t  NFSPAT_SHIFT              = 0;
 }
 
 #endif
