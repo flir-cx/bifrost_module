@@ -15,9 +15,6 @@
 
 namespace VALHALLA_VCK
 {
-    const uint32_t      BASE_ADDRESS_HDC        = 0x00000B00;
-    const uint32_t      BASE_ADDRESS_HDC_MS     = 0x00000300;
-
     /* I2C_RST */
     const uint32_t      I2C_RST_OFFSET          = 0x0010;       ///< offset relative to unit base address
     const uint32_t      I2C_RESET_MASK          = (1 << 0);     ///< bit[0]= I2C Reset, active low
@@ -42,6 +39,8 @@ namespace VALHALLA_VCK
     /* I2C_READ_REG */
     const uint32_t      I2C_READ_REG_OFFSET     = 0x0024;       ///< offset relative to unit base address
     // bit[0] = I2C READ ACC, Hmmm actually not sure what to do with this register... Somekind of status?
+
+    const uint32_t      EXT_SYNC_SOURCE_OFFSET  = 0x0034;
 
     /* I2C_READ_STATUS */
     const uint32_t      I2C_READ_STATUS_OFFSET  = 0x0080;       ///< offset relative to unit base address
