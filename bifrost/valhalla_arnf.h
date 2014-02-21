@@ -25,7 +25,7 @@ namespace VALHALLA_ARNF
     const uint32_t      NFTEMP_MASK               = 0xFFFF;
     const uint_fast8_t  NFTEMP_SHIFT              = 0;
 
-    const uint32_t      NFSPAT_OFFSET             = 0x001C;
+    const uint32_t      NFSPAT_OFFSET             = 0x0018;
     const uint32_t      NFSPAT_MASK               = 0xFFFF;
     const uint_fast8_t  NFSPAT_SHIFT              = 0;
 }
