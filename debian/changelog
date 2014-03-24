@@ -1,3 +1,9 @@
+heimdall-mods (0.3.11) hdc; urgency=low
+
+  * hdc-1.0-rc2
+
+ -- Jenkins <jenkins@se-arn-dev5.zone2.flir.net>  Fri, 14 Mar 2014 13:06:18 +0100
+
 heimdall-mods (0.3.10) lirc2; urgency=low
 
   * lirc2-1.0
