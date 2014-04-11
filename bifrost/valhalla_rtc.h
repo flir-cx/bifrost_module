@@ -19,6 +19,7 @@ namespace VALHALLA_RTC
     const uint32_t      RTC_CONTROL0_OFFSET         = 0x0010;
     const uint32_t      RTC_SET_TIME_MASK           = (1 << 2); // bit[2] = set RTC time
     const uint32_t      RTC_MILLISEC_COUNT_MASK     = (1 << 4); // bit[4] = 0:Frame counter 1:Millisec counter
+    const uint32_t      RTC_GPS_UPDATE_ENABLE       = (1 << 6); // bit[6] = GPS update enable
 
     /* CONTROL1 register */
     const uint32_t      RTC_CONTROL1_OFFSET         = 0x0014;   // set years since 2000
