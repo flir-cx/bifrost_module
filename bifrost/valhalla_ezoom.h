@@ -19,8 +19,8 @@
 #define VALHALLA_ADDR_EZOOM_CAMVIDEO_SIZE        0x00000030
 #define VALHALLA_ADDR_EZOOM_OUTVIDEO_SIZE        0x00000034
 #define VALHALLA_ADDR_EZOOM_CONTROL              0x00000038
-#define VALHALLA_ADDR_EZOOM_X_FACTOR             0x0000003c // X scale factor (ZLFACT)
-#define VALHALLA_ADDR_EZOOM_Y_FACTOR             0x00000040 // Y scale factor (ZPFACT)
+#define VALHALLA_ADDR_EZOOM_X_FACTOR             0x00000040 // X scale factor (ZLFACT)
+#define VALHALLA_ADDR_EZOOM_Y_FACTOR             0x0000003C // Y scale factor (ZPFACT)
 #define VALHALLA_ADDR_EZOOM_PAN_OFFSET           0x00000050 ///< bit[26:16] = Pan request Y (signed), bit[11:0] = Pan request X (signed). @since 2013-12-13
 #define VALHALLA_ADDR_EZOOM_BORE_SIGHT_OFFSET    0x00000054 ///< bit[26:16] = Signed boresight row, bit[11:0] = Signed boresight col. @since 2013-12-13
 #define VALHALLA_ADDR_EZOOM_PAN_X_RANGE          0X00000098 ///< bit[26:16] = Column Stop, [11:0] = Column Start
