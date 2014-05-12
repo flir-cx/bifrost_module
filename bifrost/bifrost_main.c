@@ -39,6 +39,10 @@ static u32 simulator = 0;
 module_param(simulator, uint, S_IRUSR);
 MODULE_PARM_DESC(simulator, "Enable simulator interface");
 
+static u32 membus = 0;
+module_param(membus, uint, S_IRUSR);
+MODULE_PARM_DESC(membus, "Enable memory bus interface to FPGA (instead of PCI)");
+
 static int device_mem_info(struct bifrost_device *dev, char *buf, size_t bufsz)
 {
 	int bar, len, n;
@@ -99,15 +103,17 @@ static int bifrost_procfs_read(char *page, char **start, off_t offset,
                        "Device name              : %s\n"
                        "Driver version           : %d.%d.%d%s\n"
                        "Build timestamp          : "__DATE__" "__TIME__"\n"
-                       "Mode                     : %s\n",
+                       "Mode                     : %s\n"
+                       "Interface                : %s\n",
                        BIFROST_DEVICE_NAME,
                        BIFROST_VERSION_MAJOR,
                        BIFROST_VERSION_MINOR,
                        BIFROST_VERSION_MICRO,
                        BIFROST_VERSION_APPEND_STR,
-                       dev->info.simulator == 1 ? "simulator" : "normal");
+                       dev->info.simulator == 1 ? "simulator" : "normal",
+                       dev->membus == 1 ? "memory bus" : "PCIe");
 
-	len += device_mem_info(dev, &page[len], page_size - len);
+        len += device_mem_info(dev, &page[len], page_size - len);
 
         len += snprintf(&page[len], page_size - len,
                         "Open ops.                : %ld\n"
@@ -371,6 +377,12 @@ static int __init bifrost_init(void)
         INFO("simulator interface %s\n",
              bdev->info.simulator == 0 ? "disabled" : "enabled");
 
+        if (membus > 0)
+                bdev->membus = 1;
+
+        INFO("FPGA interface %s\n",
+             bdev->membus == 0 ? "PCIe" : "memory bus");
+
         INIT_LIST_HEAD(&bdev->list);
         spin_lock_init(&bdev->lock_list);
 
@@ -401,19 +413,28 @@ static int __init bifrost_init(void)
         if (bdev->info.simulator) {
                 if (bifrost_sim_pci_init(bdev) < 0)
                         goto err_pci;
-		bdev->ops = &bifrost_sim_ops;
+                bdev->ops = &bifrost_sim_ops;
 
                 /* Continue to initialize driver without real PCI support */
                 if (bifrost_pci_probe_post_init(NULL) != 0) {
-			bifrost_sim_pci_exit(bdev);
-                        goto err_pci;
-		}
+                    bifrost_sim_pci_exit(bdev);
+                    goto err_pci;
+                }
+        } else if (bdev->membus) {
+                bdev->ops = &bifrost_ops;
+
+                /* Simulator interface disabled, register as real Membus driver */
+                if (bifrost_membus_init(bdev) != 0)
+                {
+                    bifrost_membus_exit(bdev);
+                    goto err_pci;
+                }
         } else {
                 bdev->ops = &bifrost_ops;
 
                 /* Simulator interface disabled, register as real PCI driver */
                 if (bifrost_pci_init(bdev) != 0)
-                        goto err_pci;
+                    goto err_pci;
         }
 
         INFO("init done\n");
@@ -443,10 +464,12 @@ static void __exit bifrost_exit(void)
         bifrost_dma_cleanup(bdev);
         bifrost_detach_msis();
 
-        if (bdev->info.simulator == 0)
-                bifrost_pci_exit(bdev);
+        if (bdev->info.simulator)
+            bifrost_sim_pci_exit(bdev);
+        else if (bdev->membus)
+            bifrost_membus_exit(bdev);
         else
-                bifrost_sim_pci_exit(bdev);
+            bifrost_pci_exit(bdev);
 
         flush_workqueue(work_queue);
         destroy_workqueue(work_queue);

@@ -513,7 +513,7 @@ static int usim_smb_write(int bus, u16 addr, u8 command, int size,
 {
         struct event *e;
         int v, len;
-        void *buf;
+        void *buf = NULL;
 
         switch (size) {
 	case I2C_SMBUS_BYTE:

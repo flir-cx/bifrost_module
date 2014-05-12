@@ -347,7 +347,7 @@ static int do_dma_start_xfer(struct dma_ctl *ctl,
 static int check_bar_access(struct bifrost_device *dev, int bar, int access,
 			    unsigned int offset)
 {
-	/* In normal mode, user-space doesn't have write access to BAR0 */
+	    /* In normal PCI mode, user-space doesn't have write access to BAR0 */
         const static int user_space_bar_access[6] = {
                 RD_ACCESS | EV_ACCESS,             /* BAR0 */
                 RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR1 */
@@ -356,7 +356,16 @@ static int check_bar_access(struct bifrost_device *dev, int bar, int access,
                 RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR4 */
                 RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR5 */
         };
-	/* In simulator mode, user-space has full access to the BARs */
+        /* In normal Membus mode, user-space doesn't have access to BAR2-5 */
+        const static int user_space_membus_access[6] = {
+                RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR0 */
+                RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR1 */
+                0, /* BAR2 */
+                0, /* BAR3 */
+                0, /* BAR4 */
+                0, /* BAR5 */
+        };
+        /* In simulator mode, user-space has full access to the BARs */
         const static int sim_user_space_bar_access[6] = {
 		RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR0 */
                 RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR1 */
@@ -375,11 +384,13 @@ static int check_bar_access(struct bifrost_device *dev, int bar, int access,
                 v = -EFAULT; /* BAR is not mapped into memory */
                 goto e_exit;
         }
-	if (dev->info.simulator) {
-		mask = (access & sim_user_space_bar_access[bar]);
-	} else {
-		mask = (access & user_space_bar_access[bar]);
-	}
+        if (dev->info.simulator) {
+                mask = (access & sim_user_space_bar_access[bar]);
+        } else if (dev->membus) {
+                mask = (access & user_space_membus_access[bar]);
+        } else {
+                mask = (access & user_space_bar_access[bar]);
+        }
         if (access != mask) {
                 v = -EACCES; /* User hasn't sufficient access rights */
                 goto e_exit;
@@ -585,7 +596,10 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
                  * Note: the user handle is used as cookie for DMA done event
                  * matching.
                  */
-                rc = do_dma_start_xfer(dev->dma_ctl, &xfer, dir, hnd);
+                if (dev->membus)
+                        rc = do_membus_xfer(dev, &xfer, dir);
+                else
+                        rc = do_dma_start_xfer(dev->dma_ctl, &xfer, dir, hnd);
                 if (rc >= 0) {
                         INFO("BIFROST_DMA_TRANSFER_%s: sys=%08lx, dev=%08x, "
                              "len=%d\n",

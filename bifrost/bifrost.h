@@ -177,6 +177,11 @@ struct bifrost_device {
 
         struct bifrost_operations *ops;
         struct dma_ctl *dma_ctl;
+
+        /* Membus addons */
+        int membus;
+        struct platform_device * pMemDev;
+        struct class *pClass;
 };
 extern struct bifrost_device *bdev;
 
@@ -225,5 +230,9 @@ void bifrost_detach_msis(void);
 int bifrost_simulate_msi(unsigned int msi);
 int bifrost_dma_init(int hw_irq, struct bifrost_device *dev);
 void bifrost_dma_cleanup(struct bifrost_device *dev);
+
+int bifrost_membus_init(struct bifrost_device *dev);
+void bifrost_membus_exit(struct bifrost_device *dev);
+int do_membus_xfer(struct bifrost_device *dev, struct bifrost_dma_transfer *xfer, int up_down);
 
 #endif /* BIFROST_H_ */
