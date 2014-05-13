@@ -103,6 +103,11 @@ static int map_device_memory(struct device_memory *mem)
         if (mem->bar >= 2)
                 return -EINVAL; /* Only two chip selects active */
 
+#ifndef CS0_BASE_ADDR
+#define CS0_BASE_ADDR 0
+        ALERT("CS0_BASE_ADDR undefined\n");
+#endif
+
         mem->addr_bus = CS0_BASE_ADDR + (mem->bar * 0x02000000);
         mem->addr = ioremap_nocache(mem->addr_bus, SZ_4K);
         if (mem->addr == NULL) {
