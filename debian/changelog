@@ -1,3 +1,10 @@
+heimdall-mods (0.3.21) lirc2; urgency=low
+
+  [ Jenkins ]
+  * lirc2-1.2-rc1
+
+ -- root <root@se-arn-dev5>  Wed, 04 Jun 2014 09:38:53 +0000
+
 heimdall-mods (0.3.20) hdcms; urgency=low
 
   [ Jenkins ]
