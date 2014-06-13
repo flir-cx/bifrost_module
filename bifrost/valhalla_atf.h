@@ -34,4 +34,13 @@
 //#define VALHALLA_ATF_OUT_MUX_SELECT_PREV_FRAME      0x4
 //#define VALHALLA_ATF_OUT_MUX_SELECT_DIFF_FRAME      0x5
 
+#define VALHALLA_ADDR_ATF_PAN_CTRL                  0x005C
+#define VALHALLA_ATF_MOVE_READ_PANNING_MASK         (1 << 0)
+
+#define VALHALLA_ADDR_ATF_NF_GLOB                   0x0060
+#define VALHALLA_ATF_NF_GLOB_MASK                   0xFFFF
+
+#define VALHALLA_ADDR_ATF_PAN_QUAL                  0x0064
+#define VALHALLA_ATF_PAN_QUAL_MASK                  0x0FFF
+
 #endif /* VALHALLA_ATF_H_ */
