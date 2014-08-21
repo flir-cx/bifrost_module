@@ -17,7 +17,7 @@
 export DH_OPTIONS
 
 export PREFIX=/usr
-
+export KERNELDIR=/usr/src/linux
 
 %:
 	dh $@ --parallel 
