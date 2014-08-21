@@ -23,6 +23,6 @@ export KERNELDIR=/usr/src/linux
 	dh $@ --parallel 
 
 override_dh_auto_configure:
-	make prepare
+	$(MAKE) -C $(KERNELDIR) prepare modules_prepare
 	dh_auto_configure
 
