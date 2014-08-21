@@ -15,11 +15,6 @@ ifneq ($(ARCH), $(BLDARCH))
 endif
 
 # Kernel header files to install
-HDR_FILES:=$(HDR_FILES) cmemk/cmemk.h \
-	animal-i2c/i2c_usim.h animal-i2c/animal-i2c_api.h \
-	bifrost/bifrost_api.h  \
-	$(shell find bifrost -name 'fpga_*.h' -printf 'bifrost/%P ') \
-	$(shell find bifrost -name 'valhalla_*.h' -printf 'bifrost/%P ')
 
 EXT_FILES:=\
 	cmemk/cmemk.conf:/etc/modprobe.d \
@@ -50,18 +45,39 @@ prepare:
 		fi; \
 	fi
 
+BIFROST_HDR_FILES:=\
+	bifrost/bifrost_api.h  \
+	$(shell find bifrost -name 'fpga_*.h' -printf 'bifrost/%P ') \
+	$(shell find bifrost -name 'valhalla_*.h' -printf 'bifrost/%P ')
 
 .PHONY:$(MODS)
 $(MODS):
 	@echo "  MOD : $@ $(MAKECMDGOALS)"
-	-$(MAKE) $(KMFLAGS) M=$(shell pwd)/$@ $(MAKECMDGOALS) -j1
+	$(MAKE) $(KMFLAGS) M=$(shell pwd)/$@ $(MAKECMDGOALS)
 
 %-inst:
 	@echo " INST : $*"
-	-$(MAKE) $(KMFLAGS) M=$(shell pwd)/$* INSTALL_MOD_PATH=$(DESTDIR) modules_install -j1
+	$(MAKE) $(KMFLAGS) M=$(shell pwd)/$* INSTALL_MOD_PATH=$(DESTDIR) modules_install
 
 install: $(foreach v,$(MODS),$v-inst)
-	@true
+	install -C -d $(DESTDIR)/etc/modprobe.d
+	install -C -t $(DESTDIR)/etc/modprobe.d cmemk/cmemk.conf
+	install -C -t $(DESTDIR)/etc/modprobe.d animal-i2c/animal-i2c.conf
+	install -C -t $(DESTDIR)/etc/modprobe.d bifrost/bifrost.conf
+	install -C -d $(DESTDIR)/etc
+	install -C -t $(DESTDIR)/etc cmemk/cmemk.pools
+	install -C -d $(DESTDIR)/sbin
+	install -C -t $(DESTDIR)/sbin cmemk/cmemk_modopts
+	install -C -t $(DESTDIR)/sbin flir_chardev_mod
+	install -C -d $(DESTDIR)/usr/include/cmemk
+	install -C -t $(DESTDIR)/usr/include/cmemk cmemk/cmemk.h
+	install -C -d $(DESTDIR)/usr/include/animal-i2c
+	install -C -t $(DESTDIR)/usr/include/animal-i2c animal-i2c/i2c_usim.h animal-i2c/animal-i2c_api.h
+	install -C -d $(DESTDIR)/usr/include/bifrost
+	install -C -t $(DESTDIR)/usr/include/bifrost $(BIFROST_HDR_FILES) 
+
+
+
 
 install-dev: install
 	@echo " INST : modules dev"
