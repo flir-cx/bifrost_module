@@ -54,11 +54,11 @@ prepare:
 .PHONY:$(MODS)
 $(MODS):
 	@echo "  MOD : $@ $(MAKECMDGOALS)"
-	@$(MAKE) $(KMFLAGS) M=$(shell pwd)/$@ $(MAKECMDGOALS)
+	-$(MAKE) $(KMFLAGS) M=$(shell pwd)/$@ $(MAKECMDGOALS) -j1
 
 %-inst:
 	@echo " INST : $*"
-	@$(MAKE) $(KMFLAGS) M=$(shell pwd)/$* INSTALL_MOD_PATH=$(DESTDIR) modules_install
+	-$(MAKE) $(KMFLAGS) M=$(shell pwd)/$* INSTALL_MOD_PATH=$(DESTDIR) modules_install -j1
 
 install: $(foreach v,$(MODS),$v-inst)
 	@true
