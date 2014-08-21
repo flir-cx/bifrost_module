@@ -16,9 +16,13 @@
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
+export PREFIX=/usr
+
+
 %:
 	dh $@ --parallel 
 
 override_dh_auto_configure:
 	make prepare
 	dh_auto_configure
+

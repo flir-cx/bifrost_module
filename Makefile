@@ -1,19 +1,6 @@
-# Link to latest build-system if available in top dir 
-$(shell ( ! [ -d ../maxmake ] || [ -h maxmake ] ) || ln -s ../maxmake maxmake )
-
-
-NAME:=modules
-VER_MAJOR:=0
-VER_MINOR:=0
-VER_PATCH:=1
-
-include maxmake/env.mk
-include maxmake/defrules.mk
-include maxmake/inst_t.mk
 
 MODS=cmemk animal-i2c bifrost
 DOCS=bifrost
-GOALS=modules 
 
 KMFLAGS:=$(KMFLAGS) -C $(KERNELDIR)
 ifneq ($(ARCH), $(BLDARCH))
@@ -36,46 +23,11 @@ EXT_FILES:=\
 	cmemk/cmemk_modopts:/sbin \
 	flir_chardev_mod:/sbin
 
-_all::modules
+all: $(MODS)
 	@true
 
-prepare:
-	-@$(MAKE) -C $(KERNELDIR) prepare modules_prepare -j10
+.PHONY:$(MODS)
+$(MODS):
+	+$_ exec $(MAKE) $(KMFLAGS) M=$(shell pwd)/$@ $(MAKECMDGOALS)
+	
 
-test:
-
-_distclean:: $(foreach v,$(MODS),clean-$(v))
-	@$(MAKE) -C . clean
-
-
-$(GOALS):: $(foreach v,$(MODS),mod-$(v))
-	$(ECHO) "DONE : modules $(MAKECMDGOALS)"
-
-_installrel:: $(foreach v,$(MODS),inst-$(v))
-	$(ECHO) "DONE : modules install"
-
-
-_installdev::
-	$_ $(call INSTALL,$(HDR_FILES),$(INCDIR))
-
-uninstall:
-
-inst-%::
-	+$_ exec $(MAKE) $(KMFLAGS) M=$(shell pwd)/$* INSTALL_MOD_PATH=$(DESTDIR) modules_install
-
-clean-%::
-	+$_ exec $(MAKE) $(KMFLAGS) M=$(shell pwd)/$* clean
-
-
-mod-%::
-	$(ECHO) " MOD : $* $(MAKECMDGOALS)"
-	+$_ exec $(MAKE) $(KMFLAGS) M=$(shell pwd)/$* $(MAKECMDGOALS)
-
-
-_doc:: $(foreach dir, $(DOCS), doxygen-$(dir))
-	@true
-
-doxygen-%::
-	$(ECHO) -n " " $(NAME)/$* " DOC : "
-	$_ cd $* && doxygen > doxygen.log 2>&1
-	$(ECHO) "$$(cat $*/doxygen.log | grep -i 'Warning:' | wc -l) Warnings, $$(cat $*/doxygen.log | grep -i 'Error:' | wc -l) Errors"

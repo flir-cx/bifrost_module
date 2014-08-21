@@ -1,6 +1,4 @@
 
-
-
 # This is the kernel based makefile for the module
 
 ifeq ($(ARCH), arm)
