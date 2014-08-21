@@ -30,6 +30,11 @@
 #include "valhalla_msi.h"
 #include "valhalla_dma.h"
 
+/* FIXME: This should have a ifdef for kernel version to get sizes. I don't know when this changed. */
+#ifndef SZ_4K
+#include <asm-generic/sizes.h>
+#endif
+
 #define FPGA_MEM_TIME   30    // Time in us from address write to memory access
 
 #define FPGA_IRQ_0      ((3-1)*32 + 16)
