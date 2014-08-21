@@ -32,9 +32,11 @@ EXT_FILES:=\
 all: $(MODS)
 	@true
 
-distclean clean:: $(MODS)
+clean:: $(MODS)
 	@true
 
+distclean::
+	$(MAKE) -C . clean
 
 prepare:
 	set -e ; if [ "$$(cat prepare.arch)" != "$(ARCH)" ] ; then \
