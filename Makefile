@@ -4,6 +4,16 @@ MODS=cmemk animal-i2c bifrost
 DOCS=bifrost
 MAKE:=$(MAKE) --no-print-directory
 
+# Enable nice make
+ifdef V
+  E:=@true
+  R:=
+else
+  E:=@echo
+  R:=@
+  MAKE:=@$(MAKE) --no-print-directory
+endif
+
 ifeq ($(DESTDIR), )
  DESTDIR=$(EXTDIR)
  PREFIX=
@@ -52,35 +62,41 @@ BIFROST_HDR_FILES:=\
 
 .PHONY:$(MODS)
 $(MODS):
-	@echo "  MOD : $@ $(MAKECMDGOALS)"
-	$(MAKE) $(KMFLAGS) M=$(shell pwd)/$@ $(MAKECMDGOALS)
+	$E "  MOD : $@ $(MAKECMDGOALS)"
+	$R $(MAKE) $(KMFLAGS) M=$(shell pwd)/$@ $(MAKECMDGOALS)
 
 %-inst:
-	@echo " INST : $*"
-	$(MAKE) $(KMFLAGS) M=$(shell pwd)/$* INSTALL_MOD_PATH=$(DESTDIR) modules_install
+	$E " INST : $*"
+	$R $(MAKE) $(KMFLAGS) M=$(shell pwd)/$* INSTALL_MOD_PATH=$(DESTDIR) modules_install
 
-install: $(foreach v,$(MODS),$v-inst)
-	install -C -d $(DESTDIR)/etc/modprobe.d
-	install -C -t $(DESTDIR)/etc/modprobe.d cmemk/cmemk.conf
-	install -C -t $(DESTDIR)/etc/modprobe.d animal-i2c/animal-i2c.conf
-	install -C -t $(DESTDIR)/etc/modprobe.d bifrost/bifrost.conf
-	install -C -d $(DESTDIR)/etc
-	install -C -t $(DESTDIR)/etc cmemk/cmemk.pools
-	install -C -d $(DESTDIR)/sbin
-	install -C -t $(DESTDIR)/sbin cmemk/cmemk_modopts
-	install -C -t $(DESTDIR)/sbin flir_chardev_mod
-	install -C -d $(DESTDIR)/usr/include/cmemk
-	install -C -t $(DESTDIR)/usr/include/cmemk cmemk/cmemk.h
-	install -C -d $(DESTDIR)/usr/include/animal-i2c
-	install -C -t $(DESTDIR)/usr/include/animal-i2c animal-i2c/i2c_usim.h animal-i2c/animal-i2c_api.h
-	install -C -d $(DESTDIR)/usr/include/bifrost
-	install -C -t $(DESTDIR)/usr/include/bifrost $(BIFROST_HDR_FILES) 
+install: install-rel install-dev
+	@true
+
+install-rel: $(foreach v,$(MODS),$v-inst)
+	$E " INST : mod"
+	$R install -C -d $(DESTDIR)/etc/modprobe.d
+	$R install -C -t $(DESTDIR)/etc/modprobe.d cmemk/cmemk.conf
+	$R install -C -t $(DESTDIR)/etc/modprobe.d animal-i2c/animal-i2c.conf
+	$R install -C -t $(DESTDIR)/etc/modprobe.d bifrost/bifrost.conf
+	$R install -C -d $(DESTDIR)/etc
+	$R install -C -t $(DESTDIR)/etc cmemk/cmemk.pools
+	$R install -C -d $(DESTDIR)/sbin
+	$R install -C -t $(DESTDIR)/sbin cmemk/cmemk_modopts
+	$R install -C -t $(DESTDIR)/sbin flir_chardev_mod
+
+install-dev: 
+	$E " INST : mod dev"
+	$R install -C -d $(DESTDIR)/$(PREFIX)/include/cmemk
+	$R install -C -t $(DESTDIR)/$(PREFIX)/include/cmemk cmemk/cmemk.h
+	$R install -C -d $(DESTDIR)/$(PREFIX)/include/animal-i2c
+	$R install -C -t $(DESTDIR)/$(PREFIX)/include/animal-i2c animal-i2c/i2c_usim.h animal-i2c/animal-i2c_api.h
+	$R install -C -d $(DESTDIR)/$(PREFIX)/include/bifrost
+	$R install -C -t $(DESTDIR)/$(PREFIX)/include/bifrost $(BIFROST_HDR_FILES) 
 
 
 
 
-install-dev: install
-	@echo " INST : modules dev"
-	@mkdir -p $(sort $(dir $(addprefix $(DESTDIR)/$(PREFIX)/usr/include/,$(HDR_FILES))))
-	@cp -u $(HDR_FILES) $(DESTDIR)/$(PREFIX)/usr/include
+#	@echo " INST : modules dev"
+#	@mkdir -p $(sort $(dir $(addprefix $(DESTDIR)/$(PREFIX)/usr/include/,$(HDR_FILES))))
+#	@cp -u $(HDR_FILES) $(DESTDIR)/$(PREFIX)/usr/include
 
