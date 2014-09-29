@@ -1,3 +1,17 @@
+heimdall-mods (0.3.28) hdcms; urgency=low
+
+  [ Jenkins ]
+  * hdcms-1.5
+
+ -- root <root@se-arn-dev5>  Mon, 29 Sep 2014 09:55:01 +0000
+
+heimdall-mods (0.3.27) hdcms; urgency=low
+
+  [ Jenkins ]
+  * hdcms-1.5
+
+ -- root <root@se-arn-dev5>  Thu, 25 Sep 2014 15:25:07 +0000
+
 heimdall-mods (0.3.26) hdc; urgency=low
 
   [ Jenkins ]
