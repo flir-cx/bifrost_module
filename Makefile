@@ -15,7 +15,7 @@ else
 endif
 
 ifeq ($(DESTDIR), )
- DESTDIR=$(EXTDIR)
+ DESTDIR=$(OVERLAYDIR)
  PREFIX=
 endif
 
