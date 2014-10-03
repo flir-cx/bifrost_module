@@ -44,16 +44,8 @@ distclean::
 	$(MAKE) -C . clean
 
 prepare:
-	set -e ; if [ "$$(cat prepare.arch)" != "$(ARCH)" ] ; then \
-		echo "Prepare"; \
-		if $(MAKE) -C $(KERNELDIR) prepare modules_prepare -j10 ; then \
-			echo "$(ARCH)" > prepare.arch; \
-		else \
-			echo "** COULD NOT STAMP PREPARE **"; \
-			echo "** You probably need to prepare your arch with sudo..."; \
-			exit 1; \
-		fi; \
-	fi
+	echo "Prepare"
+	$(MAKE) -C $(KERNELDIR) prepare modules_prepare
 
 BIFROST_HDR_FILES:=\
 	bifrost/bifrost_api.h  \
@@ -61,9 +53,9 @@ BIFROST_HDR_FILES:=\
 	$(shell find bifrost -name 'valhalla_*.h' -printf 'bifrost/%P ')
 
 .PHONY:$(MODS)
-$(MODS):
+$(MODS): prepare
 	$E "  MOD : $@ $(MAKECMDGOALS)"
-	$R $(MAKE) $(KMFLAGS) M=$(shell pwd)/$@ $(MAKECMDGOALS)
+	$R $(MAKE) $(KMFLAGS) M=$(shell pwd)/$@
 
 %-inst:
 	$E " INST : $*"
