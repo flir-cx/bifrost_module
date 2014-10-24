@@ -25,7 +25,10 @@ namespace VALHALLA_VMAN
     const uint32_t      SYSTEM_SYNC_MODE_MASK           = (0x1F << 1);    ///< bit[5:1] = System Sync Mode
     const uint_fast8_t  SYSTEM_SYNC_MODE_SHIFT          =  1;
     const uint32_t      EXTERN_SYNC_SELECT_MASK         = (1 << 6);       ///< bit[6] = Extern sync select
-    const uint32_t      FRAME_SELECT_ENABLE_MASK        = (1 << 7);       ///< bit[7] = Frame select enable
+    const uint32_t      FRAME_SELECT_ENABLE_MASK        = (1 << 8);       ///< bit[8] = Frame select enable
+    const uint32_t      SYNC_5_ENABLE_MASK              = (1 << 9);
+    const uint32_t      SYNC_6_ENABLE_MASK              = (1 << 10);
+    const uint32_t      SYNC_TRILEVEL_ENABLE_MASK       = (1 << 11);
 
     /* relative unit base offset to SYNC1 control registers */
     const uint32_t      CONTROL_SYNC1_1_OFFSET          =  0x0020;        ///< relative unit base offset to SYNC1_1 control register
