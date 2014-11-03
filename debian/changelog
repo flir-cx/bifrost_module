@@ -1,3 +1,10 @@
+heimdall-mods (0.3.30) rescue; urgency=low
+
+  [ Jenkins ]
+  * rescue-1.0
+
+ -- root <root@se-arn-dev5>  Mon, 03 Nov 2014 12:06:59 +0000
+
 heimdall-mods (0.3.29) lirc2; urgency=low
 
   [ Jenkins ]
