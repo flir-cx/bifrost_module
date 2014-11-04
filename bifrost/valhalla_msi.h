@@ -30,29 +30,11 @@
 #ifndef VALHALLA_MSI_H_
 #define VALHALLA_MSI_H_
 
-/*
- * DMA done on channel<N>, N=0..7
- */
-#define VALHALLA_MSI_DMA_DONE_CH(n) (1 << (n))
-
-/*
- * Miscellaneous FPGA error
- */
-#define VALHALLA_MSI_ERROR (1 << 8)
-
-#define VALHALLA_MSI_SYS_SYNC (1 << 10)
-#define VALHALLA_MSI_CLRX_SYNC (1 << 11)
-
-/*
- * Video frame sync(s)
- */
-#define VALHALLA_MSI_VIN0_FRAME_SYNC (1 << 12)
-#define VALHALLA_MSI_VIN1_FRAME_SYNC (1 << 13)
 
  /*
   * FIXME move to heimsim file, not a real MSI IRQ, only used by HEIMSIM 
   */
-#define VALHALLA_MSI_VIDEO_FRAME_SYNC (1 << 9)
+//#define VALHALLA_MSI_VIDEO_FRAME_SYNC (1 << 9)
 
 #ifdef __KERNEL__
 #include <linux/bitops.h>
