@@ -12,11 +12,13 @@
  */
 
 #include <linux/module.h>
+#include <linux/jiffies.h>
 
 #include "bifrost.h"
 #include "bifrost_dma.h"
 #include "valhalla_dma.h"
 #include "valhalla_msi.h"
+#include "bifrost_platform.h"
 
 static struct file_operations bifrost_fops;
 static dev_t bifrost_dev_no;
@@ -305,6 +307,98 @@ void bifrost_create_event(struct bifrost_device *dev,
         spin_unlock(&dev->lock_list);
 }
 
+
+int finish_dma_buffer(struct dma_usr_req *usr_req)
+{
+
+    dma_addr_t bus_addr = usr_req->bus_addr;
+    __u32 size = usr_req->size;
+    struct bifrost_user_handle *hnd = usr_req->cookie;
+    struct pci_dev *dev = hnd->dev->pdev;
+    void *  dev_buff = usr_req->dev_buff;
+
+    switch(usr_req->up_down)
+    {
+    case BIFROST_DMA_DIRECTION_DOWN:
+        pci_unmap_single(dev, bus_addr, size, DMA_TO_DEVICE);
+        break;
+
+    case BIFROST_DMA_DIRECTION_UP:
+        pci_unmap_single(dev, bus_addr, size, DMA_FROM_DEVICE);
+        if(copy_to_user(usr_req->usr_buff,dev_buff,size))
+            goto e_exit;
+        break;
+    }
+
+e_exit:
+    kfree(dev_buff);
+
+    return 0;
+}
+
+
+int prepare_dma_buffer( struct bifrost_dma_transfer *xfer,struct dma_req *req,
+                        int up_down,struct  dma_usr_req * usr_req)
+{
+    __u32 size = usr_req->size = xfer->size;
+    struct bifrost_user_handle *hnd = usr_req->cookie= req->cookie;
+    struct pci_dev *dev = hnd->dev->pdev;
+    void *dev_buff;
+    dma_addr_t bus_addr=0;
+
+    init_completion(&usr_req->work);
+
+    req->pwork = &usr_req->work;             // save completion in request
+    usr_req->usr_buff = (void*)xfer->system; // save usr ptr  in usr request
+    usr_req->up_down = up_down;
+
+    dev_buff = usr_req->dev_buff = kmalloc(size, GFP_KERNEL | __GFP_DMA); // allocate dma buffer
+    if(dev_buff ==NULL)
+           goto e_exit;
+
+    switch (up_down)
+    {
+        case BIFROST_DMA_DIRECTION_DOWN: /* system memory -> FPGA memory */
+            if(copy_from_user(dev_buff, usr_req->usr_buff,size)) // copy user buffer to dma buffer
+                goto e_exit;
+            bus_addr =   pci_map_single(dev, dev_buff, size, DMA_TO_DEVICE); // prepare buffer for dma transfer
+            break;
+        case BIFROST_DMA_DIRECTION_UP: /* FPGA memory -> system memory */
+            bus_addr =   pci_map_single(dev, dev_buff, size, DMA_FROM_DEVICE); // prepare buffer for dma transfer
+            break;
+    }
+
+    if(!bus_addr)
+       goto e_exit;
+
+     xfer->system = (unsigned long)bus_addr;       // update req with new dma buffer
+     usr_req->bus_addr = (unsigned long)bus_addr;
+
+
+     INFO("Starting DMA transfer %s using usrp %p bus %x devp %p with size %x \n",
+          (usr_req->up_down ? "to FPGA":"from FPGA"),
+         usr_req->usr_buff,usr_req->bus_addr,usr_req->dev_buff, usr_req->size);
+
+
+    return 0;
+
+e_exit:
+    kfree(dev_buff);
+    return -ENOMEM;
+}
+
+
+void wait_for_done(struct dma_usr_req *usr_req)
+{
+
+    int ret = wait_for_completion_interruptible_timeout(&usr_req->work, msecs_to_jiffies(1000));
+
+    if(ret==0)
+          INFO("BIFROST_DMA_TRANSFER timed out");
+
+    finish_dma_buffer(usr_req);
+}
+
 static int do_dma_start_xfer(struct dma_ctl *ctl,
                              struct bifrost_dma_transfer *xfer,
                              int up_down,
@@ -312,9 +406,13 @@ static int do_dma_start_xfer(struct dma_ctl *ctl,
 {
         struct dma_req *req;
         unsigned int ticket;
-
+        struct dma_usr_req usr_req;
         req = alloc_dma_req(&ticket, cookie, GFP_KERNEL);
         if (req == NULL)
+                return -ENOMEM;
+
+        if(xfer->flags & BIFROST_DMA_USER_BUFFER) //buffer is allocated in user space, physical Non-Contiguous
+           if(prepare_dma_buffer(xfer,req,up_down,&usr_req))
                 return -ENOMEM;
 
         switch (up_down) {
@@ -336,6 +434,9 @@ static int do_dma_start_xfer(struct dma_ctl *ctl,
         }
         start_dma_xfer(ctl, req);
 
+        if(xfer->flags & BIFROST_DMA_USER_BUFFER)
+            wait_for_done(&usr_req);
+
         return (int)ticket;
 }
 
@@ -356,6 +457,16 @@ static int check_bar_access(struct bifrost_device *dev, int bar, int access,
                 RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR4 */
                 RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR5 */
         };
+
+        const static int user_space_bar_access_fvd[6] = {  /*used for */
+                RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR0  fvd registers       */
+                RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR1  ddr memory window   */
+                0, /* BAR2 */
+                RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR3  dma engine control*/
+                0, /* BAR4 */
+                0, /* BAR5 */
+        };
+
         /* In normal Membus mode, user-space doesn't have access to BAR2-5 */
         const static int user_space_membus_access[6] = {
                 RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR0 */
@@ -386,8 +497,10 @@ static int check_bar_access(struct bifrost_device *dev, int bar, int access,
         }
         if (dev->info.simulator) {
                 mask = (access & sim_user_space_bar_access[bar]);
+        } else if (platform_rocky()) {
+            mask = (access & user_space_bar_access_fvd[bar]);
         } else if (dev->membus) {
-                mask = (access & user_space_membus_access[bar]);
+           mask = (access & user_space_membus_access[bar]);
         } else {
                 mask = (access & user_space_bar_access[bar]);
         }

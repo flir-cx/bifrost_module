@@ -22,11 +22,12 @@
 #include <linux/pci.h>
 #include <linux/poll.h>
 #include <linux/proc_fs.h>
+#include <linux/version.h>
 
 #include "bifrost_api.h"
 #include "bifrost_dma.h"
 #include "bifrost_sim.h"
-
+#include <linux/slab.h>
 /*
  * Define driver information (displayed using modinfo)
  */
@@ -51,6 +52,11 @@
 
 #define BIFROST_DMA_DIRECTION_UP 0 /* up-stream: FPGA-RAM -> CPU-RAM */
 #define BIFROST_DMA_DIRECTION_DOWN 1 /* down-stream: CPU-RAM -> FPGA-RAM */
+
+
+#ifndef VM_RESERVED
+#define VM_RESERVED (VM_DONTEXPAND | VM_DONTDUMP)
+#endif
 
 /*
  * Debug macros
@@ -168,6 +174,7 @@ struct bifrost_device {
         int irq;                        /* PCIe MSI interrupt line */
         struct timers timers;           /* timers */
         struct device_memory regb[6];   /* FPGA register bank (PCIe => max 6 BARs) */
+        struct device_memory* regb_dma;   /* BAR used for DMA registers*/
         struct device_memory ddr;       /* FPGA DDR memory */
         struct dma_buffer scratch;      /* general DMA'able scratch buffer */
         struct dma_status dma_status;
@@ -234,5 +241,6 @@ void bifrost_dma_cleanup(struct bifrost_device *dev);
 int bifrost_membus_init(struct bifrost_device *dev);
 void bifrost_membus_exit(struct bifrost_device *dev);
 int do_membus_xfer(struct bifrost_device *dev, struct bifrost_dma_transfer *xfer, int up_down);
+irqreturn_t FVDInterruptService(int irq, void *dev_id);
 
 #endif /* BIFROST_H_ */

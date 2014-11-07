@@ -35,8 +35,14 @@
 #include <asm/uaccess.h>
 #include <asm/pgtable.h>
 #include <asm/io.h>
+#include <linux/slab.h>
 
 #include <linux/version.h>
+
+#ifndef VM_RESERVED
+#define VM_RESERVED (VM_DONTEXPAND | VM_DONTDUMP)
+#endif
+
 
 #if 0
 #  if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
@@ -2025,7 +2031,6 @@ int __init cmem_init(void)
     int pool_size;
     int pool_num_buffers;
     unsigned long length;
-    unsigned long phys_end_kernel;
     HeapMem_Header *header;
     char *pstart[NBLOCKS];
     char *pend[NBLOCKS];
@@ -2170,6 +2175,7 @@ int __init cmem_init(void)
 	 * the total size of physical memory). Disabling it!
 	 */
 #if 0
+       unsigned long phys_end_kernel;
         /* attempt to determine the end of Linux kernel memory */
         phys_end_kernel = virt_to_phys((void *)PAGE_OFFSET) +
                    (num_physpages << PAGE_SHIFT);
@@ -2295,12 +2301,13 @@ int __init cmem_init(void)
 
         nblocks++;
     }
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
     /* Create the /proc entry */
     cmem_proc_entry = create_proc_entry("cmem", 0, NULL);
     if (cmem_proc_entry) {
         cmem_proc_entry->proc_fops = &cmem_proc_ops;
     }
+#endif
 
     printk(KERN_INFO "cmemk initialized\n");
 

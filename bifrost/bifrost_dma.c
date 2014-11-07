@@ -166,6 +166,8 @@ int start_dma_xfer(struct dma_ctl *ctl, struct dma_req *req)
         return 0;
 }
 
+
+
 void *dma_done(struct dma_ctl *ctl, int irq, unsigned int *ticket, s64 *time)
 {
         unsigned long flags;
@@ -188,6 +190,11 @@ void *dma_done(struct dma_ctl *ctl, int irq, unsigned int *ticket, s64 *time)
         cookie = req->cookie;
         *ticket = req->ticket;
         *time = get_xfer_time_ns(&req->ts);
+
+        if(req->pwork)
+            complete(req->pwork);
+
+
         kfree(req);
 
         spin_lock_irqsave(&ctl->lock, flags);

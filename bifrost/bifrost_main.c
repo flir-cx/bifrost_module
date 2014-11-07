@@ -42,7 +42,7 @@ MODULE_PARM_DESC(simulator, "Enable simulator interface");
 static u32 membus = 0;
 module_param(membus, uint, S_IRUSR);
 MODULE_PARM_DESC(membus, "Enable memory bus interface to FPGA (instead of PCI)");
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
 static int device_mem_info(struct bifrost_device *dev, char *buf, size_t bufsz)
 {
 	int bar, len, n;
@@ -150,7 +150,7 @@ static int bifrost_procfs_read(char *page, char **start, off_t offset,
         *eof = 1;
         return len;
 }
-
+#endif
 static int bifrost_alloc_dma_buffer(struct dma_buffer *buf, size_t size,
                                     struct pci_dev *pdev)
 {
@@ -230,7 +230,7 @@ void bifrost_dma_chan_start(void *data, u32 ch, u32 src, u32 dst, u32 len,
                             u32 dir)
 {
         struct bifrost_device *dev = data;
-        struct device_memory *mem = &dev->regb[0];
+        struct device_memory *mem = dev->regb_dma;
         unsigned long flags;
 
         spin_lock_irqsave(&mem->lock, flags);
@@ -402,14 +402,17 @@ static int __init bifrost_init(void)
          * proc root with a file name same as the device (use NULL as
          * parent dir)
          */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#else
         bdev->proc = create_proc_read_entry(BIFROST_DEVICE_NAME, 0, NULL,
                                                   bifrost_procfs_read,
                                                   bdev);
+
         if (bdev->proc == NULL) {
                 ALERT("failed to add proc fs entry\n");
                 goto err_proc;
         }
-
+ #endif
         if (bdev->info.simulator) {
                 if (bifrost_sim_pci_init(bdev) < 0)
                         goto err_pci;
@@ -457,8 +460,11 @@ static int __init bifrost_init(void)
 static void __exit bifrost_exit(void)
 {
         INFO("exit\n");
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#else
         remove_proc_entry(BIFROST_DEVICE_NAME, NULL);
+#endif
+
         bifrost_cdev_exit(bdev);
         bdev->ops->free_dma_buffer(&bdev->scratch);
         bifrost_dma_cleanup(bdev);

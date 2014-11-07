@@ -27,6 +27,8 @@
 #include "bifrost_dma.h"
 #include "valhalla_msi.h"
 #include "valhalla_dma.h"
+#include "bifrost_platform.h"
+
 
 extern void bifrost_dma_chan_start(void *data, u32 ch, u32 src, u32 dst,
                                    u32 len, u32 dir);
@@ -36,12 +38,25 @@ extern void bifrost_dma_chan_start(void *data, u32 ch, u32 src, u32 dst,
 #define NO_IRQ  ((unsigned int)(-1))
 #endif
 
+
+#ifndef __devinitdata
+#define __devinitdata
+#endif
+
+#ifndef __devinit
+#define __devinit
+#endif
+
 /*
  * Using IDs from Xilinx devboard, OK since it is only for internal
  * on-board use.
  */
 #define FLIR_VENDOR_ID 0x10EE
 #define FLIR_DEVICE_ID 0x7022
+
+#define ALTERA_VENDOR_ID 0x1172
+#define ALTERA_DEVICE_ID 0x1001
+
 
 static struct pci_driver bifrost_pci_driver;
 
@@ -66,9 +81,12 @@ static inline unsigned int get_msi_vector(void *p)
 
 static irqreturn_t dma_msi_handler(int irq, void *dev_id);
 static irqreturn_t default_msi_handler(int irq, void *dev_id);
+static irqreturn_t fvd_msi_handler(int irq, void *dev_id);
 
 #define MSI_ENABLE(name, handler, flags) {NO_IRQ, 0, flags, name, handler, NULL}
 #define MSI_DISABLED {NO_IRQ, 0, 0, "", NULL, NULL}
+
+static int msi_interrupts = 32;
 
 static struct msi_action msi[32] = {
         MSI_ENABLE("dma0", dma_msi_handler, 0), /* MSI vector 0 */
@@ -105,11 +123,48 @@ static struct msi_action msi[32] = {
         MSI_DISABLED, /* MSI vector 31 */
 };
 
+static struct msi_action msi_fvd[32] = {
+        MSI_ENABLE("dma0", dma_msi_handler, 0), /* MSI vector 0 */
+        MSI_DISABLED, /* MSI vector 1 */
+        MSI_DISABLED, /* MSI vector 2 */
+        MSI_DISABLED, /* MSI vector 3 */
+        MSI_DISABLED, /* MSI vector 4 */
+        MSI_DISABLED, /* MSI vector 5 */
+        MSI_DISABLED, /* MSI vector 6 */
+        MSI_DISABLED, /* MSI vector 7 */
+        MSI_ENABLE("fvd_interrupt", fvd_msi_handler, 0), /* MSI vector 8 */
+        MSI_DISABLED, /* MSI vector 9 */
+        MSI_DISABLED, /* MSI vector 10 */
+        MSI_DISABLED, /* MSI vector 11 */
+        MSI_DISABLED, /* MSI vector 12 */
+        MSI_DISABLED, /* MSI vector 13 */
+        MSI_DISABLED, /* MSI vector 14 */
+        MSI_DISABLED, /* MSI vector 15 */
+        MSI_DISABLED, /* MSI vector 16 */
+        MSI_DISABLED, /* MSI vector 17 */
+        MSI_DISABLED, /* MSI vector 18 */
+        MSI_DISABLED, /* MSI vector 19 */
+        MSI_DISABLED, /* MSI vector 20 */
+        MSI_DISABLED, /* MSI vector 21 */
+        MSI_DISABLED, /* MSI vector 22 */
+        MSI_DISABLED, /* MSI vector 23 */
+        MSI_DISABLED, /* MSI vector 24 */
+        MSI_DISABLED, /* MSI vector 25 */
+        MSI_DISABLED, /* MSI vector 26 */
+        MSI_DISABLED, /* MSI vector 27 */
+        MSI_DISABLED, /* MSI vector 28 */
+        MSI_DISABLED, /* MSI vector 29 */
+        MSI_DISABLED, /* MSI vector 30 */
+        MSI_DISABLED, /* MSI vector 31 */
+};
+
+
+
 int bifrost_simulate_msi(unsigned int msi_vec)
 {
         struct msi_action *m;
 
-        if (msi_vec >= ARRAY_SIZE(msi))
+        if (msi_vec >= msi_interrupts)
                 return -EINVAL; /* Too big MSI vector */
 
         m = &msi[msi_vec];
@@ -137,8 +192,10 @@ static int request_msi(struct msi_action *m, int hw_irq, int vec, void *data)
 int bifrost_attach_msis_to_irq(int hw_irq, struct bifrost_device *dev)
 {
         int n, v;
+        if(platform_rocky())
+            memcpy(msi,msi_fvd,msi_interrupts * sizeof(struct msi_action));
 
-        for (n = 0; n < ARRAY_SIZE(msi); n++) {
+        for (n = 0; n < msi_interrupts; n++) {
                 if (msi[n].handler == NULL)
                         continue; /* No handler defined for this MSI */
                 if (msi[n].irq != NO_IRQ)
@@ -176,8 +233,14 @@ int bifrost_dma_init(int irq, struct bifrost_device *dev)
 		num_ch = 1;
 		idle_map = 1;
 	} else {
-		struct device_memory *mem = &dev->regb[0];
-		u32 val;
+        struct device_memory *mem;
+        u32 val;
+
+        if(platform_rocky())
+            dev->regb_dma = &dev->regb[3];
+        else
+            dev->regb_dma = &dev->regb[0];
+        mem = dev->regb_dma;
 
 		mem->rd(mem->handle, VALHALLA_ADDR_DMA_CAPABILITY, &val);
 		num_ch = val & 0xf;
@@ -240,6 +303,15 @@ void bifrost_pci_exit(struct bifrost_device *dev)
 {
         INFO("\n");
         pci_unregister_driver(&bifrost_pci_driver);
+}
+
+
+
+static irqreturn_t fvd_msi_handler(int irq, void *dev_id)
+{
+     struct bifrost_device *dev = get_msi_data(dev_id);
+     return FVDInterruptService(irq,dev);
+
 }
 
 static irqreturn_t dma_msi_handler(int irq, void *dev_id)
@@ -485,8 +557,14 @@ int __devinit bifrost_pci_probe(struct pci_dev *pdev, const struct pci_device_id
         }
 
         /* Enable message signaled interrupts (MSI) */
+        if(platform_rocky())
+            msi_interrupts = 1;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+        rc = pci_enable_msi_block(pdev,msi_interrupts);
+#else
         rc = pci_enable_msi(pdev);
-        if (rc) {
+#endif
+        if (rc<0) {
                 ALERT("Enable MSI failed: %d\n", rc);
                 return -ENODEV;
         }
@@ -546,18 +624,12 @@ void bifrost_pci_remove(struct pci_dev *pdev)
 }
 
 struct pci_device_id bifrost_pci_device_table[] __devinitdata = {
-        {
-                FLIR_VENDOR_ID,
-                FLIR_DEVICE_ID,
-                PCI_ANY_ID, /* use wild card for subvendor and subdevice ids */
-                PCI_ANY_ID,
-                0, 0, /* class and classmask are unspecified */
-                0
-        }, /* private_data */
-        {
-                0
-        }, /* only a single PCI device entry */
-};
+
+        { PCI_DEVICE(FLIR_VENDOR_ID, FLIR_DEVICE_ID) },
+        { PCI_DEVICE(ALTERA_VENDOR_ID, ALTERA_DEVICE_ID) },
+        { 0, },
+    };
+
 
 static struct pci_driver bifrost_pci_driver = {
         .name = BIFROST_DEVICE_NAME,

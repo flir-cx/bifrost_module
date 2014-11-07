@@ -43,7 +43,7 @@
 #include <linux/spinlock.h>
 #include <linux/types.h>
 #include <linux/wait.h>
-
+#include <linux/version.h>
 #include "i2c_usim.h"
 
 MODULE_LICENSE("GPL");
@@ -409,6 +409,8 @@ static int __init i2c_usim_init(void)
         printk(KERN_INFO DRIVER_NAME ": registered i2c-adapter %d\n",
                i2c_usim_adapter.nr);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#else
         if (create_proc_read_entry(DRIVER_NAME, 0, NULL, i2c_usim_proc_read,
                                    &i2c_usim_adapter) == NULL) {
                 i2c_del_adapter(&i2c_usim_adapter);
@@ -416,7 +418,7 @@ static int __init i2c_usim_init(void)
                        "failed\n");
                 return -EINVAL;
         }
-
+#endif
         init_event_queue(&i2c_eventq);
 
         v = register_chrdev(0, DRIVER_NAME, &i2c_usim_fops);

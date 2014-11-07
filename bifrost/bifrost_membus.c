@@ -39,8 +39,6 @@
 
 #define FPGA_IRQ_0      ((3-1)*32 + 16)
 
-static irqreturn_t FVDInterruptService(int irq, void *dev_id);
-
 
 // NOTE! - This function must perform 8-bytes (4 16 bit words) bursts to FPGA (bug in iMX6)
 static void fpgaread (u32 dst, void *src, u32 len)
