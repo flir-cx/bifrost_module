@@ -71,7 +71,6 @@ struct bifrost_dma_transfer {
         unsigned long system;
         __u32 device; /* Device (e.g. FPGA) memory offset. */
         __u32 size;   /* Size of transfer in bytes. */
-        __u32 flags;
 };
 #define BIFROST_DMA_USER_BUFFER       (1<<0)   //buffer is allocated in user space, physical Non-Contiguous
 

@@ -411,9 +411,9 @@ static int do_dma_start_xfer(struct dma_ctl *ctl,
         if (req == NULL)
                 return -ENOMEM;
 
-        if(xfer->flags & BIFROST_DMA_USER_BUFFER) //buffer is allocated in user space, physical Non-Contiguous
-           if(prepare_dma_buffer(xfer,req,up_down,&usr_req))
-                return -ENOMEM;
+     //   if(xfer->flags & BIFROST_DMA_USER_BUFFER) //buffer is allocated in user space, physical Non-Contiguous
+   //        if(prepare_dma_buffer(xfer,req,up_down,&usr_req))
+    //            return -ENOMEM;
 
         switch (up_down) {
         case BIFROST_DMA_DIRECTION_DOWN: /* system memory -> FPGA memory */
@@ -434,8 +434,8 @@ static int do_dma_start_xfer(struct dma_ctl *ctl,
         }
         start_dma_xfer(ctl, req);
 
-        if(xfer->flags & BIFROST_DMA_USER_BUFFER)
-            wait_for_done(&usr_req);
+  //      if(xfer->flags & BIFROST_DMA_USER_BUFFER)
+  //          wait_for_done(&usr_req);
 
         return (int)ticket;
 }
