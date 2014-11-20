@@ -19,6 +19,7 @@
 #include <linux/module.h>
 #include <linux/version.h>
 #include <linux/stat.h>
+#include <linux/pci.h>
 
 #include <asm/byteorder.h>
 #include <asm/atomic.h>
