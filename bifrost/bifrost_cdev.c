@@ -635,10 +635,12 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
         }
 
         case BIFROST_IOCTL_READ_RANGE_REGB:
+        case BIFROST_IOCTL_READ_REPEAT_REGB:
         {
                 u32 i, *buf;
                 void __user *user_ptr;
                 struct bifrost_access_range a;
+                int incr = (cmd == BIFROST_IOCTL_READ_RANGE_REGB) ? 4 : 0;
 
                 if (copy_from_user(&a, uarg, sizeof(a)))
                         return -ENOMEM;
@@ -649,7 +651,7 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
                         return -ENOMEM;
 
                 for (i = 0; i < a.count; ++i) {
-                        rc = do_read_regb(dev, a.bar, a.offset + i * 4, &buf[i]);
+                        rc = do_read_regb(dev, a.bar, a.offset + i * incr, &buf[i]);
                         if (rc < 0) {
                                 kfree(buf);
                                 return rc;
@@ -673,6 +675,34 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
                 rc = do_write_regb(dev, a.bar, a.offset, a.value);
                 if (rc < 0)
                         return rc;
+                break;
+        }
+
+        case BIFROST_IOCTL_WRITE_REPEAT_REGB:
+        {
+                u32 i, *buf;
+                void __user *user_ptr;
+                struct bifrost_access_range a;
+
+                if (copy_from_user(&a, uarg, sizeof(a)))
+                        return -ENOMEM;
+
+                user_ptr = (void __user *)a.values;
+                buf = kmalloc(sizeof(u32) * a.count, GFP_KERNEL);
+                if (NULL == buf)
+                        return -ENOMEM;
+                if (copy_from_user((void *)buf, user_ptr, sizeof(u32) * a.count))
+                        rc = -EFAULT;
+
+                for (i = 0; i < a.count; ++i) {
+                        rc = do_write_regb(dev, a.bar, a.offset, buf[i]);
+                        if (rc < 0) {
+                                kfree(buf);
+                                return rc;
+                        }
+                }
+
+                kfree(buf);
                 break;
         }
 

@@ -127,9 +127,17 @@ struct bifrost_simulator_memory_transfer {
 #define BIFROST_IOCTL_READ_RANGE_REGB \
         _IOWR(BIFROST_IOC_MAGIC, 4, struct bifrost_access_range)
 
+/* Read same FPGA register multiple times */
+#define BIFROST_IOCTL_READ_REPEAT_REGB \
+        _IOWR(BIFROST_IOC_MAGIC, 5, struct bifrost_access_range)
+
 /* Write FPGA register */
 #define BIFROST_IOCTL_WRITE_REGB \
         _IOW(BIFROST_IOC_MAGIC, 2, struct bifrost_access)
+
+/* Write same FPGA register multiple times */
+#define BIFROST_IOCTL_WRITE_REPEAT_REGB \
+        _IOWR(BIFROST_IOC_MAGIC, 6, struct bifrost_access_range)
 
 /*
  * Modify FPGA register, i.e. read register, clear bits, set bits and
