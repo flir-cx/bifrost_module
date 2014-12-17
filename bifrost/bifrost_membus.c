@@ -157,13 +157,6 @@ static void remove_io_regions(struct bifrost_device *bifrost)
                 unmap_device_memory(&bifrost->regb[n]);
 }
 
-void bifrost_membus_remove(struct pci_dev *pdev)
-{
-        INFO("removing PCI\n");
-        remove_io_regions(bdev);
-        pci_set_drvdata(pdev, NULL);
-}
-
 int __init bifrost_membus_init(struct bifrost_device *dev)
 {
         int rc;
@@ -217,6 +210,10 @@ int __init bifrost_membus_init(struct bifrost_device *dev)
 void bifrost_membus_exit(struct bifrost_device *dev)
 {
         INFO("\n");
+
+        free_irq(gpio_to_irq(FPGA_IRQ_0), bdev);
+        gpio_free(FPGA_IRQ_0);
+        remove_io_regions(bdev);
         device_destroy(dev->pClass, dev->cdev.dev);
         class_destroy(dev->pClass);
         platform_device_unregister(dev->pMemDev);
