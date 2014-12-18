@@ -590,6 +590,13 @@ int __devinit bifrost_pci_probe(struct pci_dev *pdev, const struct pci_device_id
         if (rc < 2)
                 goto err_pci_iomap_regb;
 
+        /*Patch BAR0 memory read/write functions to use 16 bit accesses*/
+        if(platform_rocky())
+        {
+            bdev->regb[0].wr = membus_write_device_memory;
+            bdev->regb[0].rd = membus_read_device_memory;
+        }
+
         /* Run post init and make driver accessible */
         if (bifrost_pci_probe_post_init(pdev) != 0)
                 goto err_pci_post_init;

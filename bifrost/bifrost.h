@@ -242,5 +242,8 @@ int bifrost_membus_init(struct bifrost_device *dev);
 void bifrost_membus_exit(struct bifrost_device *dev);
 int do_membus_xfer(struct bifrost_device *dev, struct bifrost_dma_transfer *xfer, int up_down);
 irqreturn_t FVDInterruptService(int irq, void *dev_id);
+int membus_write_device_memory(void *handle, u32 offset, u32 value);
+int membus_read_device_memory(void *handle, u32 offset, u32 *value);
+
 
 #endif /* BIFROST_H_ */

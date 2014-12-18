@@ -62,14 +62,14 @@ static void fpgawrite (void *dst, u32 src, u32 len)
                 *pDst=*pSrc++;
 }
 
-static int write_device_memory(void *handle, u32 offset, u32 value)
+int membus_write_device_memory(void *handle, u32 offset, u32 value)
 {
         struct device_memory *mem = handle;
         iowrite16(cpu_to_le16(value), mem->addr + (offset << 1));
         return 0;
 }
 
-static int read_device_memory(void *handle, u32 offset, u32 *value)
+ int membus_read_device_memory(void *handle, u32 offset, u32 *value)
 {
         struct device_memory *mem = handle;
         u32 v;
@@ -93,8 +93,8 @@ static void init_device_memory(int n, struct device_memory *mem)
         mem->flags = 0;
         mem->size = SZ_4K;
         mem->handle = mem;
-        mem->rd = read_device_memory;
-        mem->wr = write_device_memory;
+        mem->rd = membus_read_device_memory;
+        mem->wr = membus_write_device_memory;
         mem->mset = set_mode_device_memory;
         spin_lock_init(&mem->lock);
 }
@@ -233,8 +233,8 @@ static void WriteSDRAM(struct bifrost_device *dev,
         addr >>= 2; // Adjust for 32 bit address
 
         // Set up SDRAM address register for write
-        write_device_memory(dev->regb[0].handle, 0, addr & 0xFFF8);
-        write_device_memory(dev->regb[0].handle, 1, (addr >> 16) | 0x8000);
+        membus_write_device_memory(dev->regb[0].handle, 0, addr & 0xFFF8);
+        membus_write_device_memory(dev->regb[0].handle, 1, (addr >> 16) | 0x8000);
 
         // Let FPGA prepare to receive data
         udelay(FPGA_MEM_TIME);
@@ -257,8 +257,8 @@ static void ReadSDRAM(struct bifrost_device *dev,
         addr >>= 2; // Adjust for 32 bit address
 
         // Set SDRAM address register
-        write_device_memory(dev->regb[0].handle, 0, addr & 0xFFF8);
-        write_device_memory(dev->regb[0].handle, 1, (addr >> 16) & 0x7FFF);
+        membus_write_device_memory(dev->regb[0].handle, 0, addr & 0xFFF8);
+        membus_write_device_memory(dev->regb[0].handle, 1, (addr >> 16) & 0x7FFF);
 
         // Let FPGA prepare data
         udelay(FPGA_MEM_TIME);
@@ -295,7 +295,7 @@ irqreturn_t FVDInterruptService(int irq, void *dev_id)
         INFO("Irq %d\n", irq);
 
         // Clear interrupt by reading Execute Status Register
-        read_device_memory(dev->regb[0].handle, 0x1C, &dummy);
+        membus_read_device_memory(dev->regb[0].handle, 0x1C, &dummy);
 
         // Indicate completion
         event.type = BIFROST_EVENT_TYPE_IRQ;
