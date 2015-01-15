@@ -154,6 +154,17 @@ struct bifrost_simulator_memory_transfer {
 #define BIFROST_IOCTL_START_DMA_DOWN \
         _IOW(BIFROST_IOC_MAGIC, 11, struct bifrost_dma_transfer)
 
+
+/* Start down-stream DMA transfer (from CPU), extra flag for buffer allocated in user space */
+#define BIFROST_IOCTL_START_DMA_DOWN_USER \
+        _IOW(BIFROST_IOC_MAGIC, 12, struct bifrost_dma_transfer)
+
+/* Start up-stream DMA transfer (to CPU),     extra flag for buffer allocated in user space */
+#define BIFROST_IOCTL_START_DMA_UP_USER \
+        _IOW(BIFROST_IOC_MAGIC, 13, struct bifrost_dma_transfer)
+
+
+
 /*
  * Bifrost Events
  */

@@ -317,6 +317,15 @@ int finish_dma_buffer(struct dma_usr_req *usr_req)
     struct pci_dev *dev = hnd->dev->pdev;
     void *  dev_buff = usr_req->dev_buff;
 
+
+    int ret = wait_for_completion_interruptible_timeout(&usr_req->work, msecs_to_jiffies(1000));
+    if(ret==0)
+    {
+          printk("BIFROST_DMA_TRANSFER timed out\n");
+          goto e_exit;
+    }
+
+
     switch(usr_req->up_down)
     {
     case BIFROST_DMA_DIRECTION_DOWN:
@@ -330,12 +339,19 @@ int finish_dma_buffer(struct dma_usr_req *usr_req)
         break;
     }
 
+
+    kfree(dev_buff);
+    return 0;
+
 e_exit:
     kfree(dev_buff);
-
-    return 0;
+    return -ETIMEDOUT;
 }
 
+
+//Rocky FPGA dma engine:
+//alignment  = 8 bytes
+//burst size = 8 bytes
 
 int prepare_dma_buffer( struct bifrost_dma_transfer *xfer,struct dma_req *req,
                         int up_down,struct  dma_usr_req * usr_req)
@@ -345,6 +361,9 @@ int prepare_dma_buffer( struct bifrost_dma_transfer *xfer,struct dma_req *req,
     struct pci_dev *dev = hnd->dev->pdev;
     void *dev_buff;
     dma_addr_t bus_addr=0;
+
+    if(size==0)
+        return -EFAULT;
 
     init_completion(&usr_req->work);
 
@@ -388,21 +407,10 @@ e_exit:
 }
 
 
-void wait_for_done(struct dma_usr_req *usr_req)
-{
-
-    int ret = wait_for_completion_interruptible_timeout(&usr_req->work, msecs_to_jiffies(1000));
-
-    if(ret==0)
-          INFO("BIFROST_DMA_TRANSFER timed out");
-
-    finish_dma_buffer(usr_req);
-}
-
 static int do_dma_start_xfer(struct dma_ctl *ctl,
                              struct bifrost_dma_transfer *xfer,
                              int up_down,
-                             void *cookie)
+                             void *cookie,int flags)
 {
         struct dma_req *req;
         unsigned int ticket;
@@ -411,9 +419,9 @@ static int do_dma_start_xfer(struct dma_ctl *ctl,
         if (req == NULL)
                 return -ENOMEM;
 
-     //   if(xfer->flags & BIFROST_DMA_USER_BUFFER) //buffer is allocated in user space, physical Non-Contiguous
-   //        if(prepare_dma_buffer(xfer,req,up_down,&usr_req))
-    //            return -ENOMEM;
+        if(flags & BIFROST_DMA_USER_BUFFER) //buffer is allocated in user space, physical Non-Contiguous
+           if(prepare_dma_buffer(xfer,req,up_down,&usr_req))
+                return -ENOMEM;
 
         switch (up_down) {
         case BIFROST_DMA_DIRECTION_DOWN: /* system memory -> FPGA memory */
@@ -434,8 +442,9 @@ static int do_dma_start_xfer(struct dma_ctl *ctl,
         }
         start_dma_xfer(ctl, req);
 
-  //      if(xfer->flags & BIFROST_DMA_USER_BUFFER)
-  //          wait_for_done(&usr_req);
+        if(flags & BIFROST_DMA_USER_BUFFER)
+            if(finish_dma_buffer(&usr_req))
+                return -ETIMEDOUT;
 
         return (int)ticket;
 }
@@ -607,7 +616,7 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
         struct bifrost_user_handle *hnd = file->private_data;
         struct bifrost_device *dev = hnd->dev;
         void __user *uarg = (void __user *)arg;
-        int rc = 0;
+        int rc = 0,flags=0;
 
         dev->stats.ioctls++;
 
@@ -721,13 +730,16 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
                 break;
         }
 
+        case BIFROST_IOCTL_START_DMA_UP_USER:
+        case BIFROST_IOCTL_START_DMA_DOWN_USER:
+            flags =  BIFROST_DMA_USER_BUFFER;
         case BIFROST_IOCTL_START_DMA_UP:
         case BIFROST_IOCTL_START_DMA_DOWN:
         {
                 struct bifrost_dma_transfer xfer;
                 int dir;
 
-                if (cmd == BIFROST_IOCTL_START_DMA_DOWN)
+                if (cmd == BIFROST_IOCTL_START_DMA_DOWN || cmd== BIFROST_IOCTL_START_DMA_DOWN_USER)
                         dir = BIFROST_DMA_DIRECTION_DOWN;
                 else
                         dir = BIFROST_DMA_DIRECTION_UP;
@@ -742,7 +754,7 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
                 if (dev->membus)
                         rc = do_membus_xfer(dev, &xfer, dir);
                 else
-                        rc = do_dma_start_xfer(dev->dma_ctl, &xfer, dir, hnd);
+                        rc = do_dma_start_xfer(dev->dma_ctl, &xfer, dir, hnd,flags);
                 if (rc >= 0) {
                         INFO("BIFROST_DMA_TRANSFER_%s: sys=%08lx, dev=%08x, "
                              "len=%d\n",
