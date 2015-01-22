@@ -1,3 +1,15 @@
+heimdall-mods (0.3.32) rescue; urgency=low
+
+  * rescue-1.1
+
+ -- Jenkins <jenkins@se-arn-dev5.zone2.flir.net>  Thu, 22 Jan 2015 12:17:13 +0100
+
+heimdall-mods (0.3.31) rescue; urgency=low
+
+  * rescue-1.1
+
+ -- Jenkins <jenkins@se-arn-dev5.zone2.flir.net>  Thu, 22 Jan 2015 10:46:42 +0100
+
 heimdall-mods (0.3.30) rescue; urgency=low
 
   [ Jenkins ]
