@@ -28,6 +28,7 @@
 
 #include "bifrost.h"
 #include "valhalla_dma.h"
+#include "bifrost_platform.h"
 
 struct bifrost_device *bdev;
 
@@ -293,8 +294,13 @@ int bifrost_pci_probe_post_init(struct pci_dev *pdev)
                 goto err_alloc;
         }
 
-        if (bifrost_cdev_init(bdev) != 0)
-		goto err_alloc;
+
+       if (bifrost_cdev_init(bdev) != 0)
+            goto err_alloc;
+
+       if (platform_rocky() && bifrost_fvd_init(bdev) != 0)
+            goto err_alloc;
+
 
         return 0;
 

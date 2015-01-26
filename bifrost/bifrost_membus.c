@@ -170,13 +170,27 @@ int __init bifrost_membus_init(struct bifrost_device *dev)
 
         /* Run post init and make driver accessible */
         if (bifrost_cdev_init(bdev) != 0)
-                goto err_pci_post_init;
+                goto err_pci_iomap_regb;
 
+        if (bifrost_fvd_init(dev) != 0)
+                goto err_pci_iomap_regb;
+
+        return 0;
+
+        /* stack-like cleanup on error */
+  err_pci_iomap_regb:
+        remove_io_regions(bdev);
+        return -ENODEV;
+}
+
+int  bifrost_fvd_init(struct bifrost_device *dev)
+{
+        int rc;
         // Register platform driver
         bdev->pMemDev = platform_device_alloc(BIFROST_DEVICE_NAME, 1);
         if (bdev->pMemDev == NULL) {
                 ALERT("Registering MEMBUS driver failed\n");
-                goto err_pci_post_init;
+                goto err_platform_alloc;
         }
         platform_device_add(bdev->pMemDev);
 
@@ -199,25 +213,30 @@ int __init bifrost_membus_init(struct bifrost_device *dev)
 
         return 0;
 
-        /* stack-like cleanup on error */
-
-  err_pci_post_init:
-        remove_io_regions(bdev);
-  err_pci_iomap_regb:
+        err_platform_alloc:
         return -ENODEV;
+
+}
+
+void bifrost_fvd_exit(struct bifrost_device *dev)
+{
+        INFO("\n");
+
+        free_irq(gpio_to_irq(FPGA_IRQ_0), bdev);
+        gpio_free(FPGA_IRQ_0);
+        device_destroy(dev->pClass, dev->cdev.dev);
+        class_destroy(dev->pClass);
+        platform_device_unregister(dev->pMemDev);
 }
 
 void bifrost_membus_exit(struct bifrost_device *dev)
 {
         INFO("\n");
 
-        free_irq(gpio_to_irq(FPGA_IRQ_0), bdev);
-        gpio_free(FPGA_IRQ_0);
-        remove_io_regions(bdev);
-        device_destroy(dev->pClass, dev->cdev.dev);
-        class_destroy(dev->pClass);
-        platform_device_unregister(dev->pMemDev);
+        remove_io_regions(dev);
+        bifrost_fvd_exit(dev);
 }
+
 
 ////////////////////////////////////////////////////////
 //

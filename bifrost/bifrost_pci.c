@@ -304,9 +304,11 @@ void bifrost_pci_exit(struct bifrost_device *dev)
 {
         INFO("\n");
         pci_unregister_driver(&bifrost_pci_driver);
+
+        if(platform_rocky())
+            bifrost_fvd_exit(dev);
+
 }
-
-
 
 static irqreturn_t fvd_msi_handler(int irq, void *dev_id)
 {
