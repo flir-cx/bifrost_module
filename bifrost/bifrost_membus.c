@@ -37,7 +37,11 @@
 
 #define FPGA_MEM_TIME   30    // Time in us from address write to memory access
 
+irqreturn_t FVDIRQ1Service(int irq, void *dev_id);
+
 #define FPGA_IRQ_0      ((3-1)*32 + 16)
+#define FPGA_IRQ_1      ((3-1)*32 + 17) // GPIO3.17
+#define FPGA_IRQ_2      ((3-1)*32 + 18) // GPIO3.18
 
 
 // NOTE! - This function must perform 8-bytes (4 16 bit words) bursts to FPGA (bug in iMX6)
@@ -211,6 +215,20 @@ int  bifrost_fvd_init(struct bifrost_device *dev)
         else
                 INFO("Successfully requested FPGA IRQ\n");
 
+        if (gpio_is_valid(FPGA_IRQ_1) == 0)
+                ALERT("FPGA_IRQ_1 can not be used\n");
+
+        gpio_request(FPGA_IRQ_1, "FpgaIrq1");
+        gpio_direction_input(FPGA_IRQ_1);
+
+        rc = request_irq(gpio_to_irq(FPGA_IRQ_1), FVDIRQ1Service,
+                IRQF_TRIGGER_FALLING, "FpgaIrq1", bdev);
+
+        if (rc != 0)
+                ALERT("Failed to request FPGA IRQ1 (%d)\n", rc);
+        else
+                INFO("Successfully requested FPGA IRQ1\n");
+
         return 0;
 
         err_platform_alloc:
@@ -320,6 +338,33 @@ irqreturn_t FVDInterruptService(int irq, void *dev_id)
         event.type = BIFROST_EVENT_TYPE_IRQ;
         event.data.irq_source = 1;
         bifrost_create_event_in_atomic(dev, &event);
+
+        return IRQ_HANDLED;
+}
+
+//////////////////////////////////////////////////////////
+// This is the interrupt service thread for HostIntr_n(1)
+//////////////////////////////////////////////////////////
+irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
+{
+        struct bifrost_device *dev = (struct bifrost_device *)dev_id;
+        struct bifrost_event event;
+        u32 vector, mask;
+
+        INFO("Irq1 %d\n", irq);
+
+        // Read interrupt mask
+        membus_read_device_memory(dev->regb[0].handle, 0x38, &mask);
+
+        // Read interrupt vector
+        membus_read_device_memory(dev->regb[0].handle, 0x37, &vector);
+
+        if (mask & vector & 0x20) {
+          // Indicate completion
+          event.type = BIFROST_EVENT_TYPE_IRQ;
+          event.data.irq_source = 2;
+          bifrost_create_event_in_atomic(dev, &event);
+        }
 
         return IRQ_HANDLED;
 }
