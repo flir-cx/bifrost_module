@@ -397,7 +397,7 @@ static int __init bifrost_init(void)
         if (work_pool == NULL)
                 return -ENOMEM;
 
-        work_queue = create_workqueue("bifrost");
+        work_queue = create_singlethread_workqueue("bifrost");
         if (work_queue == NULL) {
                 mempool_destroy(work_pool);
                 return -ENOMEM;
