@@ -86,12 +86,46 @@ struct bifrost_dma {
         __u64 cookie;
 };
 
+/*
+ * Used in bifrost_membus.c
+ * This struct is returned when FPGA has JPEGLS Frame to deliver
+ * irq_source = 3
+ */
+struct bifrost_membus_frame {
+        __u32 irq_source;      /* irq_source, note this is needed so we match
+                                    the event struct. */
+        __u32 frameNo;         /* Buffer number where we can find the frame. */
+        __u32 frameSize;       /* Size of the compressed frame. */
+        struct timespec time;  /* time stamp when we got the irq. */
+};
+
+/*
+ * Used in bifrost_membus.c
+ * This struct is returned when FPGA generates an
+ * "execute finished" IRQ.
+ * irq_source = 1.
+ */
+struct bifrost_membus_irqstatus {
+        __u32 irq_source;    /* irq_source, note this is needed so we match the
+                                  event struct. */
+        __u32 value;         /* FPGA irq status (reg:0x1c). */
+};
+
+/*
+ * When using membus irq, the following irq_sources are defined:
+ * 1: Execute interrupt
+ * 2: HSI (BOB) interrupt
+ * 3: JPEGLS frame interrupt
+ */
+
 struct bifrost_event {
         __u32 type;
         union {
                 __u32 irq_source;
                 struct bifrost_access regb_access;
                 struct bifrost_dma dma;
+                struct bifrost_membus_irqstatus irqstatus;
+                struct bifrost_membus_frame frame;
         } data;
         struct {
                 struct timeval received;

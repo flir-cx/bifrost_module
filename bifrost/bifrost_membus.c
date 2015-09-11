@@ -327,16 +327,18 @@ irqreturn_t FVDInterruptService(int irq, void *dev_id)
 {
         struct bifrost_device *dev = (struct bifrost_device *)dev_id;
         struct bifrost_event event;
-        u32 dummy;
+        u32 exec_status;
 
         INFO("Irq %d\n", irq);
+        memset(&event, 0, sizeof(event));
 
         // Clear interrupt by reading Execute Status Register
-        membus_read_device_memory(dev->regb[0].handle, 0x1C, &dummy);
+        membus_read_device_memory(dev->regb[0].handle, 0x1C, &exec_status);
 
         // Indicate completion
         event.type = BIFROST_EVENT_TYPE_IRQ;
         event.data.irq_source = 1;
+        event.data.irqstatus.value = exec_status;
         bifrost_create_event_in_atomic(dev, &event);
 
         return IRQ_HANDLED;
@@ -351,6 +353,8 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
         struct bifrost_event event;
         u32 vector, mask;
 
+        memset(&event, 0, sizeof(event));
+
         INFO("Irq1 %d\n", irq);
 
         // Read interrupt mask
@@ -359,11 +363,37 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
         // Read interrupt vector
         membus_read_device_memory(dev->regb[0].handle, 0x37, &vector);
 
-        if (mask & vector & 0x20) {
-          // Indicate completion
-          event.type = BIFROST_EVENT_TYPE_IRQ;
-          event.data.irq_source = 2;
-          bifrost_create_event_in_atomic(dev, &event);
+        // printk("irg1:0x%04x, vec:0x%04x mask:0x%04x\n", irq, vector, mask);
+
+        if (mask & vector & 0x20) {       // HSI (BOB) irq
+                // Indicate completion
+                event.type = BIFROST_EVENT_TYPE_IRQ;
+                event.data.irq_source = 2;
+                bifrost_create_event_in_atomic(dev, &event);
+        }
+        else if(mask & vector & 0x100) {  // JPEGLS irq
+                u32 frameNo, frameSize;
+                u32 frameSizeReg = 0x171;
+
+
+                // Indicate completion
+                event.type = BIFROST_EVENT_TYPE_IRQ;
+                event.data.irq_source = 3;
+
+                // Read interrupt mask
+                membus_read_device_memory(dev->regb[0].handle, 0x170, &frameNo);      // JLSLastBuffer
+
+                // Read interrupt vector
+                frameSizeReg += frameNo;
+
+                membus_read_device_memory(dev->regb[0].handle, frameSizeReg, &frameSize);    // JLSBufferSize
+                event.data.frame.frameNo = frameNo;
+                event.data.frame.frameSize = frameSize;
+                getnstimeofday(&event.data.frame.time);
+
+                // printk("lastbuf:%d, size:%d\n", frameNo, frameSize);
+
+                bifrost_create_event_in_atomic(dev, &event);
         }
 
         return IRQ_HANDLED;
