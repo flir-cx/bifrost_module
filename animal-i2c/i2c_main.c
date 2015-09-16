@@ -28,6 +28,7 @@
 #include <linux/moduleparam.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 #include <asm/uaccess.h>
 
 #include "animal-i2c_api.h"
@@ -502,7 +503,9 @@ static int animal_open(struct inode *inode, struct file *file)
         hnd->animal_adapter = &dev->animal_adapter[i];
         hnd->client.addr = 0;
         hnd->client.adapter = hnd->animal_adapter->adapter;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,14,0)
         hnd->client.driver = &animal_driver;
+#endif
         snprintf(hnd->client.name, I2C_NAME_SIZE, "animal-i2c %d", dev->users++);
 
         /* allow access to user handle via file struct data pointer */
