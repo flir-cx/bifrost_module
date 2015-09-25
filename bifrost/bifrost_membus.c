@@ -368,17 +368,16 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
         if (mask & vector & 0x20) {       // HSI (BOB) irq
                 // Indicate completion
                 event.type = BIFROST_EVENT_TYPE_IRQ;
-                event.data.irq_source = 2;
+                event.data.irq_source = 0x02;
                 bifrost_create_event_in_atomic(dev, &event);
         }
         else if(mask & vector & 0x100) {  // JPEGLS irq
                 u32 frameNo, frameSize;
                 u32 frameSizeReg = 0x171;
 
-
                 // Indicate completion
                 event.type = BIFROST_EVENT_TYPE_IRQ;
-                event.data.irq_source = 3;
+                event.data.irq_source = 0x04;
 
                 // Read interrupt mask
                 membus_read_device_memory(dev->regb[0].handle, 0x170, &frameNo);      // JLSLastBuffer

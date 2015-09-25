@@ -89,7 +89,7 @@ struct bifrost_dma {
 /*
  * Used in bifrost_membus.c
  * This struct is returned when FPGA has JPEGLS Frame to deliver
- * irq_source = 3
+ * irq_source = 4
  */
 struct bifrost_membus_frame {
         __u32 irq_source;      /* irq_source, note this is needed so we match
@@ -115,7 +115,7 @@ struct bifrost_membus_irqstatus {
  * When using membus irq, the following irq_sources are defined:
  * 1: Execute interrupt
  * 2: HSI (BOB) interrupt
- * 3: JPEGLS frame interrupt
+ * 4: JPEGLS frame interrupt
  */
 
 struct bifrost_event {
