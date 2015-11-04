@@ -394,6 +394,22 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 
                 bifrost_create_event_in_atomic(dev, &event);
         }
+        else if(mask & vector & 0x200) {  // DIO irq
+                u32 status;
+
+                // Indicate completion
+                event.type = BIFROST_EVENT_TYPE_IRQ;
+                event.data.irq_source = 0x08;
+
+                // Read interrupt mask
+                membus_read_device_memory(dev->regb[0].handle, 0x150, &status);  // Digital IN
+
+                // printk("DIO irq status:%d\n", status);
+
+                event.data.frame.frameNo = status;
+
+                bifrost_create_event_in_atomic(dev, &event);
+        }
 
         return IRQ_HANDLED;
 }
