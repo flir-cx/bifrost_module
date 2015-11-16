@@ -207,6 +207,7 @@ int bifrost_attach_msis_to_irq(int hw_irq, struct bifrost_device *dev)
                 if (v != 0) {
                         ALERT("failed to attach MSI%u to IRQ%u, errno=%d\n",
                               msi[n].msi_vec, msi[n].irq, v);
+                        msi[n].irq = NO_IRQ;
                 }
         }
 
@@ -304,10 +305,6 @@ void bifrost_pci_exit(struct bifrost_device *dev)
 {
         INFO("\n");
         pci_unregister_driver(&bifrost_pci_driver);
-
-        if(platform_rocky())
-            bifrost_fvd_exit(dev);
-
 }
 
 static irqreturn_t fvd_msi_handler(int irq, void *dev_id)
@@ -586,7 +583,6 @@ int __devinit bifrost_pci_probe(struct pci_dev *pdev, const struct pci_device_id
                 ALERT("Request regions failed: %d\n", rc);
                 goto err_pci_request;
         }
-
         /* Gain CPU access to FPGA register map */
         rc = setup_io_regions(bdev, pdev);
         if (rc < 2)
@@ -625,6 +621,9 @@ int __devinit bifrost_pci_probe(struct pci_dev *pdev, const struct pci_device_id
 void bifrost_pci_remove(struct pci_dev *pdev)
 {
         INFO("removing PCI\n");
+        if(platform_rocky())
+            bifrost_fvd_exit(bdev);
+        bifrost_detach_msis();
         pci_disable_msi(pdev);
         remove_io_regions(bdev);
         pci_iounmap(pdev, bdev->ddr.addr);

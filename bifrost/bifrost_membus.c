@@ -242,6 +242,8 @@ void bifrost_fvd_exit(struct bifrost_device *dev)
 
         free_irq(gpio_to_irq(FPGA_IRQ_0), bdev);
         gpio_free(FPGA_IRQ_0);
+        free_irq(gpio_to_irq(FPGA_IRQ_1), bdev);
+        gpio_free(FPGA_IRQ_1);
         device_destroy(dev->pClass, dev->cdev.dev);
         class_destroy(dev->pClass);
         platform_device_unregister(dev->pMemDev);

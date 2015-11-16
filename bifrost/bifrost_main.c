@@ -474,7 +474,6 @@ static void __exit bifrost_exit(void)
         bifrost_cdev_exit(bdev);
         bdev->ops->free_dma_buffer(&bdev->scratch);
         bifrost_dma_cleanup(bdev);
-        bifrost_detach_msis();
 
         if (bdev->info.simulator)
             bifrost_sim_pci_exit(bdev);
