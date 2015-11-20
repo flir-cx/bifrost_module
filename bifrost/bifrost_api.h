@@ -101,21 +101,34 @@ struct bifrost_membus_frame {
 
 /*
  * Used in bifrost_membus.c
- * This struct is returned when FPGA generates an
+ * When irq_source = 1: (FPGA Execute IRQ)
+ * This struct is sent when FPGA generates an
  * "execute finished" IRQ.
- * irq_source = 1.
+ * 'value' : now contains irq status (reg: 0x1c).
+ *
+ * When irq_source = 0x08  (DIO)
+ * This struct is sent when digital IO is changed
+ * 'value' : The digital IO state.
+ *
+ * When irq_source = 0x10 (HSI cable):
+ * This struct is sent when HSI cable is inserted/removed
+ * 'value' : now contains cable state.
+ *     0: cable disconnected.
+ *     1: cable connected (link is up).
  */
 struct bifrost_membus_irqstatus {
         __u32 irq_source;    /* irq_source, note this is needed so we match the
                                   event struct. */
-        __u32 value;         /* FPGA irq status (reg:0x1c). */
+        __u32 value;         /* FPGA irq status */
 };
 
 /*
  * When using membus irq, the following irq_sources are defined:
- * 1: Execute interrupt
- * 2: HSI (BOB) interrupt
- * 4: JPEGLS frame interrupt
+ * 0x01: Execute interrupt
+ * 0x02: HSI (BOB) interrupt
+ * 0x04: JPEGLS frame interrupt
+ * 0x08: Digital IO
+ * 0x10: HSI cable in/out.
  */
 
 struct bifrost_event {

@@ -408,7 +408,26 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 
                 // printk("DIO irq status:%d\n", status);
 
-                event.data.frame.frameNo = status;
+                event.data.irqstatus.value = status;
+
+                bifrost_create_event_in_atomic(dev, &event);
+        }
+        else if(mask & vector & 0x400) {  // HSI cable irq
+                u32 hsi_state;
+                u32 cable_state;
+
+                // Indicate completion
+                event.type = BIFROST_EVENT_TYPE_IRQ;
+                event.data.irq_source = 0x10;
+
+                // Read interrupt mask
+                membus_read_device_memory(dev->regb[0].handle, 0x141, &hsi_state);  // HSI cable state
+                cable_state = !!!(hsi_state & 0x04);  // bit4 indicates cable link up or down.
+                                                      // '0' == link is up, '1' == link is down.
+
+                // printk("HSI state: 0x%04x  => cablestate:%d\n", hsi_state, cable_state);
+
+                event.data.irqstatus.value = cable_state;
 
                 bifrost_create_event_in_atomic(dev, &event);
         }
