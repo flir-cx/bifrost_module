@@ -422,7 +422,7 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 
                 // Read interrupt mask
                 membus_read_device_memory(dev->regb[0].handle, 0x141, &hsi_state);  // HSI cable state
-                cable_state = !!!(hsi_state & 0x04);  // bit4 indicates cable link up or down.
+                cable_state = !!!(hsi_state & 0x10);  // bit4 indicates cable link up or down.
                                                       // '0' == link is up, '1' == link is down.
 
                 // printk("HSI state: 0x%04x  => cablestate:%d\n", hsi_state, cable_state);
