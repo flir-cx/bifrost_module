@@ -506,7 +506,7 @@ static int check_bar_access(struct bifrost_device *dev, int bar, int access,
         }
         if (dev->info.simulator) {
                 mask = (access & sim_user_space_bar_access[bar]);
-        } else if (platform_rocky()) {
+        } else if (platform_fvd()) {
             mask = (access & user_space_bar_access_fvd[bar]);
         } else if (dev->membus) {
            mask = (access & user_space_membus_access[bar]);

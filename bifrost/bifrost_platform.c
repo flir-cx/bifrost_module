@@ -11,9 +11,23 @@ bool cpu_is_imx6q(void)
 {
 	return false;
 }
+bool cpu_is_imx6dl(void)
+{
+	return false;
+}
 #endif
+
+bool platform_fvd(void)
+{
+	return platform_rocky() || platform_evander() ;
+}
 
 bool platform_rocky(void)
 {
 	return cpu_is_imx6q();
+}
+
+bool platform_evander(void)
+{
+	return cpu_is_imx6dl() ;
 }

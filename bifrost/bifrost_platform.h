@@ -6,6 +6,9 @@
 
 #include <linux/types.h>
 
+extern bool platform_fvd(void);
+extern bool platform_evander(void);
 extern bool platform_rocky(void);
+
 
 #endif

@@ -298,7 +298,7 @@ int bifrost_pci_probe_post_init(struct pci_dev *pdev)
        if (bifrost_cdev_init(bdev) != 0)
             goto err_alloc;
 
-       if (platform_rocky() && bifrost_fvd_init(bdev) != 0)
+       if (platform_fvd() && bifrost_fvd_init(bdev) != 0)
             goto err_alloc;
 
 

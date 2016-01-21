@@ -52,11 +52,12 @@ extern void bifrost_dma_chan_start(void *data, u32 ch, u32 src, u32 dst,
  * Using IDs from Xilinx devboard, OK since it is only for internal
  * on-board use.
  */
-#define FLIR_VENDOR_ID 0x10EE
-#define FLIR_DEVICE_ID 0x7022
-
+#define XILINX_VENDOR_ID 0x10EE
 #define ALTERA_VENDOR_ID 0x1172
-#define ALTERA_DEVICE_ID 0x1001
+
+#define FLIR_DEVICE_ID 0x7022
+#define EVANDER_DEVICE_ID 0x1002
+#define ROCKY_DEVICE_ID 0x1001
 
 
 static struct pci_driver bifrost_pci_driver;
@@ -193,7 +194,7 @@ static int request_msi(struct msi_action *m, int hw_irq, int vec, void *data)
 int bifrost_attach_msis_to_irq(int hw_irq, struct bifrost_device *dev)
 {
         int n, v;
-        if(platform_rocky())
+        if(platform_fvd())
             memcpy(msi,msi_fvd,msi_interrupts * sizeof(struct msi_action));
 
         for (n = 0; n < msi_interrupts; n++) {
@@ -240,6 +241,8 @@ int bifrost_dma_init(int irq, struct bifrost_device *dev)
 
         if(platform_rocky())
             dev->regb_dma = &dev->regb[3];
+        else if(platform_evander())
+            dev->regb_dma = &dev->regb[2];
         else
             dev->regb_dma = &dev->regb[0];
         mem = dev->regb_dma;
@@ -557,7 +560,7 @@ int __devinit bifrost_pci_probe(struct pci_dev *pdev, const struct pci_device_id
         }
 
         /* Enable message signaled interrupts (MSI) */
-        if(platform_rocky())
+        if(platform_fvd())
             msi_interrupts = 1;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
         rc = pci_enable_msi_block(pdev,msi_interrupts);
@@ -589,7 +592,7 @@ int __devinit bifrost_pci_probe(struct pci_dev *pdev, const struct pci_device_id
                 goto err_pci_iomap_regb;
 
         /*Patch BAR0 memory read/write functions to use 16 bit accesses*/
-        if(platform_rocky())
+        if(platform_fvd())
         {
             bdev->regb[0].wr = membus_write_device_memory;
             bdev->regb[0].rd = membus_read_device_memory;
@@ -621,7 +624,7 @@ int __devinit bifrost_pci_probe(struct pci_dev *pdev, const struct pci_device_id
 void bifrost_pci_remove(struct pci_dev *pdev)
 {
         INFO("removing PCI\n");
-        if(platform_rocky())
+        if(platform_fvd())
             bifrost_fvd_exit(bdev);
         bifrost_detach_msis();
         pci_disable_msi(pdev);
@@ -634,8 +637,9 @@ void bifrost_pci_remove(struct pci_dev *pdev)
 
 struct pci_device_id bifrost_pci_device_table[] __devinitdata = {
 
-        { PCI_DEVICE(FLIR_VENDOR_ID, FLIR_DEVICE_ID) },
-        { PCI_DEVICE(ALTERA_VENDOR_ID, ALTERA_DEVICE_ID) },
+        { PCI_DEVICE(XILINX_VENDOR_ID, FLIR_DEVICE_ID) },
+        { PCI_DEVICE(ALTERA_VENDOR_ID, ROCKY_DEVICE_ID) },
+        { PCI_DEVICE(XILINX_VENDOR_ID, EVANDER_DEVICE_ID) },
         { 0, },
     };
 
