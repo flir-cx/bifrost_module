@@ -5,7 +5,6 @@
 #include <linux/list.h>
 #include <linux/time.h>
 #include <linux/types.h>
-
 #include <linux/completion.h>
 
 typedef void (*dma_xfer_t)(void *, u32, u32, u32, u32, u32);
@@ -36,6 +35,7 @@ struct dma_usr_req {
 
 struct dma_ch;
 struct dma_ctl;
+struct bifrost_device;
 
 extern struct dma_ctl *alloc_dma_ctl(int num_ch, int idle_map, dma_xfer_t xfer,
 				void *data);
@@ -49,6 +49,6 @@ extern struct dma_req *alloc_dma_req(unsigned int *ticket, void *cookie,
 extern void free_dma_req(struct dma_req *req);
 extern int start_dma_xfer(struct dma_ctl *ctl, struct dma_req *req);
 extern void *dma_done(struct dma_ctl *ctl, int irq, unsigned int *ticket,
-                      s64 *time);
+                      s64 *time, struct bifrost_device *dev);
 
 #endif

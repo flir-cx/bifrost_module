@@ -159,8 +159,81 @@ static struct msi_action msi_fvd[32] = {
         MSI_DISABLED, /* MSI vector 30 */
         MSI_DISABLED, /* MSI vector 31 */
 };
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
 
+static ssize_t show_read_speed_avg(struct device *dev, struct device_attribute *attr,
+                         char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%lu kB/s \n", bdev->stats.read_speed_avg/(1024));
+}
+static ssize_t show_write_speed_avg(struct device *dev, struct device_attribute *attr,
+                         char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%lu kB/s \n", bdev->stats.write_speed_avg/(1024));
+}
+static ssize_t show_read_speed_last(struct device *dev, struct device_attribute *attr,
+                         char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%lu kB/s \n", bdev->stats.read_speed_last/(1024));
+}
+static ssize_t show_write_speed_last(struct device *dev, struct device_attribute *attr,
+                         char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%lu kB/s \n", bdev->stats.write_speed_last/(1024));
+}
 
+static ssize_t show_write_b(struct device *dev, struct device_attribute *attr,
+                         char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%lu kB\n", bdev->stats.write_b/1024);
+}
+
+static ssize_t show_read_b(struct device *dev, struct device_attribute *attr,
+                         char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%lu kB\n", bdev->stats.read_b/1024);
+}
+
+static ssize_t show_enable(struct device *dev, struct device_attribute *attr,
+                         char *buf)
+{
+	return scnprintf(buf, PAGE_SIZE, "%d\n", bdev->stats.enabled);
+}
+static ssize_t store_enable(struct device *dev,
+					  struct device_attribute *attr,
+					  const char *buf, size_t count)
+{
+	unsigned long val;
+	if (kstrtoul(buf, 0, &val) < 0)
+		return -EINVAL;
+
+	bdev->stats.enabled = !!val;
+	return count;
+}
+
+static DEVICE_ATTR(read_b, S_IRUGO, show_read_b, NULL);
+static DEVICE_ATTR(write_b, S_IRUGO, show_write_b, NULL);
+static DEVICE_ATTR(read_speed_last, S_IRUGO, show_read_speed_last, NULL);
+static DEVICE_ATTR(write_speed_last, S_IRUGO, show_write_speed_last, NULL);
+static DEVICE_ATTR(read_speed_avg, S_IRUGO, show_read_speed_avg, NULL);
+static DEVICE_ATTR(write_speed_avg, S_IRUGO, show_write_speed_avg, NULL);
+static DEVICE_ATTR(stats_enable, S_IWUSR | S_IRUGO , show_enable, store_enable);
+
+static struct attribute *bifrost_attrs[] = {
+	&dev_attr_read_speed_last.attr,
+	&dev_attr_write_speed_last.attr,
+    &dev_attr_read_speed_avg.attr,
+	&dev_attr_write_speed_avg.attr,
+ 	&dev_attr_read_b.attr,
+	&dev_attr_write_b.attr,
+	&dev_attr_stats_enable.attr,
+	NULL
+};
+
+static const struct attribute_group bifrost_groups = {
+	.attrs	= bifrost_attrs,
+};
+#endif
 
 int bifrost_simulate_msi(unsigned int msi_vec)
 {
@@ -327,7 +400,7 @@ static irqreturn_t dma_msi_handler(int irq, void *dev_id)
 
         dev = get_msi_data(dev_id);
 
-        cookie = dma_done(dev->dma_ctl, irq, &ticket, &xfer_time);
+        cookie = dma_done(dev->dma_ctl, irq, &ticket, &xfer_time,dev);
         if (!IS_ERR(cookie)) {
                 event.type = BIFROST_EVENT_TYPE_DMA_DONE;
                 event.data.dma.id = ticket;
@@ -537,7 +610,6 @@ int __devinit bifrost_pci_probe(struct pci_dev *pdev, const struct pci_device_id
                 ALERT("Enable device failed: %d\n", rc);
                 return -ENODEV;
         }
-
         /*
          * Enable bus master capability on device to allow device DMA to/from
          * system memory
@@ -600,7 +672,17 @@ int __devinit bifrost_pci_probe(struct pci_dev *pdev, const struct pci_device_id
 
         /* Run post init and make driver accessible */
         if (bifrost_pci_probe_post_init(pdev) != 0)
-                goto err_pci_post_init;
+                goto err_pci_post_init; 
+        /*
+         * Add sysfs group
+        */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+        rc = sysfs_create_group(&pdev->dev.kobj, &bifrost_groups);
+        if (rc) {
+                ALERT("failed to add sys fs entry\n");
+                goto err_pci_sysfs;
+        }
+#endif
 
         /* store private data pointer */
         pci_set_drvdata(pdev, NULL);
@@ -610,7 +692,10 @@ int __devinit bifrost_pci_probe(struct pci_dev *pdev, const struct pci_device_id
         return 0;
 
         /* stack-like cleanup on error */
-
+ err_pci_sysfs:
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+        sysfs_remove_group(&pdev->dev.kobj, &bifrost_groups);
+#endif
   err_pci_post_init:
         remove_io_regions(bdev);
   err_pci_iomap_regb:
@@ -626,6 +711,9 @@ void bifrost_pci_remove(struct pci_dev *pdev)
         INFO("removing PCI\n");
         if(platform_fvd())
             bifrost_fvd_exit(bdev);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+        sysfs_remove_group(&pdev->dev.kobj, &bifrost_groups);
+#endif
         bifrost_detach_msis();
         pci_disable_msi(pdev);
         remove_io_regions(bdev);

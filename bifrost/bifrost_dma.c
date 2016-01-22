@@ -9,7 +9,9 @@
 #include <linux/time.h>
 #include <linux/types.h>
 
+#include "valhalla_dma.h"
 #include "bifrost_dma.h"
+#include "bifrost.h"
 
 #define MAX_DMA_CHANNELS 32
 
@@ -166,9 +168,35 @@ int start_dma_xfer(struct dma_ctl *ctl, struct dma_req *req)
         return 0;
 }
 
+void add_stats(struct bifrost_device *dev,struct dma_req *req,s64 time)
+{
+    s64 speed ;
+    if(!time)
+        return;
 
+    //biggest transfer for not overflowing calculation =16GB
+    speed  = (s64)req->len *  NSEC_PER_SEC;
+    do_div(speed,(u32)time); //longest transfer ok for casting =4s
 
-void *dma_done(struct dma_ctl *ctl, int irq, unsigned int *ticket, s64 *time)
+    switch(req->dir)
+    {
+        case VALHALLA_ADDR_DMA_DIR_UP_STRM_DOWN:
+            dev->stats.write_speed_last = speed;
+            dev->stats.write_b += req->len;
+            dev->stats.write_buf += 1;
+            dev->stats.write_speed_avg = dev->stats.write_speed_avg * (dev->stats.write_buf-1) / dev->stats.write_buf+dev->stats.write_speed_last/dev->stats.write_buf;
+            break;
+
+        case VALHALLA_ADDR_DMA_DIR_UP_STRM_UP:
+            dev->stats.read_speed_last = speed;
+            dev->stats.read_b += req->len;
+            dev->stats.read_buf += 1;
+            dev->stats.read_speed_avg = dev->stats.read_speed_avg * (dev->stats.read_buf-1) / dev->stats.read_buf+dev->stats.read_speed_last/dev->stats.read_buf;
+            break;
+    }
+}
+
+void *dma_done(struct dma_ctl *ctl, int irq, unsigned int *ticket, s64 *time,struct bifrost_device *dev)
 {
         unsigned long flags;
         int ch, start_xfer;
@@ -190,6 +218,9 @@ void *dma_done(struct dma_ctl *ctl, int irq, unsigned int *ticket, s64 *time)
         cookie = req->cookie;
         *ticket = req->ticket;
         *time = get_xfer_time_ns(&req->ts);
+
+        if(dev->stats.enabled)
+            add_stats(dev,req,*time);
 
         if(req->pwork)
             complete(req->pwork);

@@ -81,6 +81,8 @@
  * Driver statistics
  */
 struct bifrost_stats {
+        bool enabled;
+
         /* file operations */
         unsigned long opens;
         unsigned long releases;
@@ -96,6 +98,10 @@ struct bifrost_stats {
         unsigned long write_buf;        /* number of buffers written to driver */
         unsigned long read_b;           /* number of bytes read from driver */
         unsigned long write_b;          /* number of bytes written to driver */
+        unsigned long write_speed_avg;  /* write speed average in kB/s */
+        unsigned long write_speed_last; /* write speed for last access in kB/s */
+        unsigned long read_speed_avg;   /* read speed average in kB/s */
+        unsigned long read_speed_last;  /* read speed for last access in kB/s  */
 };
 
 /*
