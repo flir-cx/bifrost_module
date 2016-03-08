@@ -1,3 +1,9 @@
+heimdall-mods (0.3.37) hdc; urgency=low
+
+  * hdc-1.5
+
+ -- Jenkins <jenkins@se-arn-dev5.zone2.flir.net>  Tue, 08 Mar 2016 10:41:45 +0100
+
 heimdall-mods (0.3.36) rescue; urgency=low
 
   * rescue-1.3
