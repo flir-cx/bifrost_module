@@ -318,7 +318,7 @@ int finish_dma_buffer(struct dma_usr_req *usr_req)
     void *  dev_buff = usr_req->dev_buff;
 
 
-    int ret = wait_for_completion_interruptible_timeout(&usr_req->work, msecs_to_jiffies(1000));
+    int ret = wait_for_completion_timeout(&usr_req->work, msecs_to_jiffies(1000));
     if(ret==0)
     {
           printk("BIFROST_DMA_TRANSFER timed out\n");
