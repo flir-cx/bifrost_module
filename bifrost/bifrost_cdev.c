@@ -340,11 +340,11 @@ int finish_dma_buffer(struct dma_usr_req *usr_req)
     }
 
 
-    kfree(dev_buff);
+    dma_free_coherent(&dev->dev, size, dev_buff, usr_req->phy_addr);
     return 0;
 
 e_exit:
-    kfree(dev_buff);
+    dma_free_coherent(&dev->dev, size, dev_buff, usr_req->phy_addr);
     return -ETIMEDOUT;
 }
 
@@ -371,7 +371,8 @@ int prepare_dma_buffer( struct bifrost_dma_transfer *xfer,struct dma_req *req,
     usr_req->usr_buff = (void*)xfer->system; // save usr ptr  in usr request
     usr_req->up_down = up_down;
 
-    dev_buff = usr_req->dev_buff = kmalloc(size, GFP_KERNEL | __GFP_DMA); // allocate dma buffer
+    dev_buff = usr_req->dev_buff = dma_alloc_coherent(&dev->dev, size, &usr_req->phy_addr,
+                       GFP_DMA | GFP_KERNEL);
     if(dev_buff ==NULL)
            goto e_exit;
 
@@ -402,7 +403,7 @@ int prepare_dma_buffer( struct bifrost_dma_transfer *xfer,struct dma_req *req,
     return 0;
 
 e_exit:
-    kfree(dev_buff);
+    dma_free_coherent(&dev->dev, size, dev_buff, usr_req->phy_addr);
     return -ENOMEM;
 }
 
