@@ -339,12 +339,9 @@ int finish_dma_buffer(struct dma_usr_req *usr_req)
         break;
     }
 
-
-    dma_free_coherent(&dev->dev, size, dev_buff, usr_req->phy_addr);
     return 0;
 
 e_exit:
-    dma_free_coherent(&dev->dev, size, dev_buff, usr_req->phy_addr);
     return -ETIMEDOUT;
 }
 
@@ -359,11 +356,29 @@ int prepare_dma_buffer( struct bifrost_dma_transfer *xfer,struct dma_req *req,
     __u32 size = usr_req->size = xfer->size;
     struct bifrost_user_handle *hnd = usr_req->cookie= req->cookie;
     struct pci_dev *dev = hnd->dev->pdev;
-    void *dev_buff;
     dma_addr_t bus_addr=0;
+    static int saved_size;
+    static int saved_phy;
+    static void * saved_virt;
 
     if(size==0)
         return -EFAULT;
+
+    if (size > saved_size) {
+        if (saved_virt)
+            dma_free_coherent(&dev->dev, saved_size, saved_virt, saved_phy);
+        saved_size = size;
+        saved_virt = dma_alloc_coherent(&dev->dev, saved_size, &saved_phy,
+                                        GFP_DMA | GFP_KERNEL);
+        if(saved_virt == NULL) {
+            dev_err(&dev->dev, "Out of memory\n");
+            saved_size = 0;
+            goto e_exit;
+        } else {
+            dev_info(&dev->dev, "Allocated %d kB\n", saved_size/1024);
+        }
+    }
+    usr_req->dev_buff = saved_virt;
 
     init_completion(&usr_req->work);
 
@@ -371,20 +386,15 @@ int prepare_dma_buffer( struct bifrost_dma_transfer *xfer,struct dma_req *req,
     usr_req->usr_buff = (void*)xfer->system; // save usr ptr  in usr request
     usr_req->up_down = up_down;
 
-    dev_buff = usr_req->dev_buff = dma_alloc_coherent(&dev->dev, size, &usr_req->phy_addr,
-                       GFP_DMA | GFP_KERNEL);
-    if(dev_buff ==NULL)
-           goto e_exit;
-
     switch (up_down)
     {
         case BIFROST_DMA_DIRECTION_DOWN: /* system memory -> FPGA memory */
-            if(copy_from_user(dev_buff, usr_req->usr_buff,size)) // copy user buffer to dma buffer
+            if(copy_from_user(saved_virt, usr_req->usr_buff,size)) // copy user buffer to dma buffer
                 goto e_exit;
-            bus_addr =   pci_map_single(dev, dev_buff, size, DMA_TO_DEVICE); // prepare buffer for dma transfer
+            bus_addr =   pci_map_single(dev, saved_virt, size, DMA_TO_DEVICE); // prepare buffer for dma transfer
             break;
         case BIFROST_DMA_DIRECTION_UP: /* FPGA memory -> system memory */
-            bus_addr =   pci_map_single(dev, dev_buff, size, DMA_FROM_DEVICE); // prepare buffer for dma transfer
+            bus_addr =   pci_map_single(dev, saved_virt, size, DMA_FROM_DEVICE); // prepare buffer for dma transfer
             break;
     }
 
@@ -403,7 +413,6 @@ int prepare_dma_buffer( struct bifrost_dma_transfer *xfer,struct dma_req *req,
     return 0;
 
 e_exit:
-    dma_free_coherent(&dev->dev, size, dev_buff, usr_req->phy_addr);
     return -ENOMEM;
 }
 

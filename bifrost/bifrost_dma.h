@@ -28,7 +28,6 @@ struct dma_usr_req {
     void * dev_buff;
     u32 size;
     dma_addr_t bus_addr;
-    dma_addr_t phy_addr;
     int up_down;
     struct completion work;
     void *cookie;
