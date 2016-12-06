@@ -22,6 +22,11 @@
 
 static struct file_operations bifrost_fops;
 static dev_t bifrost_dev_no;
+static struct {
+    int size;
+    int phy;
+    void * virt;
+} saved_dma_buf;
 
 /**
  * Initialize character device support of driver
@@ -73,9 +78,15 @@ int bifrost_cdev_init(struct bifrost_device *dev)
  */
 void __exit bifrost_cdev_exit(struct bifrost_device *dev)
 {
+        struct pci_dev *pcd_dev = dev->pdev;
+
         INFO("cdev_initialized=%d\n", dev->cdev_initialized);
         if (dev->cdev_initialized == 0)
                 return;
+
+        if (saved_dma_buf.virt)
+            dma_free_coherent(&pcd_dev->dev, saved_dma_buf.size,
+                              saved_dma_buf.virt, saved_dma_buf.phy);
 
         cdev_del(&dev->cdev);
         unregister_chrdev_region(bifrost_dev_no, 1);
@@ -357,28 +368,26 @@ int prepare_dma_buffer( struct bifrost_dma_transfer *xfer,struct dma_req *req,
     struct bifrost_user_handle *hnd = usr_req->cookie= req->cookie;
     struct pci_dev *dev = hnd->dev->pdev;
     dma_addr_t bus_addr=0;
-    static int saved_size;
-    static int saved_phy;
-    static void * saved_virt;
 
     if(size==0)
         return -EFAULT;
 
-    if (size > saved_size) {
-        if (saved_virt)
-            dma_free_coherent(&dev->dev, saved_size, saved_virt, saved_phy);
-        saved_size = size;
-        saved_virt = dma_alloc_coherent(&dev->dev, saved_size, &saved_phy,
-                                        GFP_DMA | GFP_KERNEL);
-        if(saved_virt == NULL) {
+    if (size > saved_dma_buf.size) {
+        if (saved_dma_buf.virt)
+            dma_free_coherent(&dev->dev, saved_dma_buf.size,
+                              saved_dma_buf.virt, saved_dma_buf.phy);
+        saved_dma_buf.size = size;
+        saved_dma_buf.virt = dma_alloc_coherent(&dev->dev, saved_dma_buf.size,
+                                                &saved_dma_buf.phy, GFP_DMA | GFP_KERNEL);
+        if(saved_dma_buf.virt == NULL) {
             dev_err(&dev->dev, "Out of memory\n");
-            saved_size = 0;
+            saved_dma_buf.size = 0;
             goto e_exit;
         } else {
-            dev_info(&dev->dev, "Allocated %d kB\n", saved_size/1024);
+            dev_info(&dev->dev, "Allocated %d kB\n", saved_dma_buf.size/1024);
         }
     }
-    usr_req->dev_buff = saved_virt;
+    usr_req->dev_buff = saved_dma_buf.virt;
 
     init_completion(&usr_req->work);
 
@@ -389,12 +398,12 @@ int prepare_dma_buffer( struct bifrost_dma_transfer *xfer,struct dma_req *req,
     switch (up_down)
     {
         case BIFROST_DMA_DIRECTION_DOWN: /* system memory -> FPGA memory */
-            if(copy_from_user(saved_virt, usr_req->usr_buff,size)) // copy user buffer to dma buffer
+            if(copy_from_user(saved_dma_buf.virt, usr_req->usr_buff,size)) // copy user buffer to dma buffer
                 goto e_exit;
-            bus_addr =   pci_map_single(dev, saved_virt, size, DMA_TO_DEVICE); // prepare buffer for dma transfer
+            bus_addr =   pci_map_single(dev, saved_dma_buf.virt, size, DMA_TO_DEVICE); // prepare buffer for dma transfer
             break;
         case BIFROST_DMA_DIRECTION_UP: /* FPGA memory -> system memory */
-            bus_addr =   pci_map_single(dev, saved_virt, size, DMA_FROM_DEVICE); // prepare buffer for dma transfer
+            bus_addr =   pci_map_single(dev, saved_dma_buf.virt, size, DMA_FROM_DEVICE); // prepare buffer for dma transfer
             break;
     }
 
