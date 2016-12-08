@@ -1,3 +1,9 @@
+heimdall-mods (0.3.40) lirc2a; urgency=low
+
+  * lirc2a-1.0
+
+ -- Jenkins <jenkins@se-arn-dev5.zone2.flir.net>  Thu, 08 Dec 2016 10:56:15 +0100
+
 heimdall-mods (0.3.39) rescue; urgency=low
 
   * rescue-1.4
