@@ -24,6 +24,10 @@
  *  11          0x00000800     clrx_sync
  *  12          0x00001000     Video frame sync: VIN0
  *  13          0x00002000     Video frame sync: VIN1
+ *  14          0x00004000     IRIG pps
+ *  14          0x00008000     MDST done
+ *  15          0x00010000     MDSRX6 done
+ *  16          0x00020000     Manual interrupt
  *   ...
  */
 

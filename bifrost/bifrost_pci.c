@@ -105,10 +105,10 @@ static struct msi_action msi[32] = {
         MSI_ENABLE("clrx_sync", default_msi_handler, 0), /* MSI vector 11 */
         MSI_ENABLE("vin0_sync", default_msi_handler, 0), /* MSI vector 12 */
         MSI_ENABLE("vin1_sync", default_msi_handler, 0), /* MSI vector 13 */
-        MSI_DISABLED, /* MSI vector 14 */
-        MSI_DISABLED, /* MSI vector 15 */
-        MSI_DISABLED, /* MSI vector 16 */
-        MSI_DISABLED, /* MSI vector 17 */
+        MSI_ENABLE("irig_pps", default_msi_handler, 0), /* MSI vector 14 */
+        MSI_ENABLE("mdst_done", default_msi_handler, 0), /* MSI vector 15 */
+        MSI_ENABLE("mdsrx6_done", default_msi_handler, 0), /* MSI vector 16 */
+        MSI_ENABLE("manual_IRQ", default_msi_handler,0), /* MSI vector 17 */
         MSI_DISABLED, /* MSI vector 18 */
         MSI_DISABLED, /* MSI vector 19 */
         MSI_DISABLED, /* MSI vector 20 */
