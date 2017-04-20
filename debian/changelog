@@ -1,3 +1,9 @@
+heimdall-mods (0.3.43) hdcms; urgency=low
+
+  * hdcms-1.8.1
+
+ -- Jenkins <jenkins@se-arn-dev5.zone2.flir.net>  Thu, 20 Apr 2017 17:32:19 +0200
+
 heimdall-mods (0.3.42) hdc; urgency=low
 
   * hdc-1.6
