@@ -38,6 +38,7 @@
 #define FPGA_MEM_TIME   30    // Time in us from address write to memory access
 
 irqreturn_t FVDIRQ1Service(int irq, void *dev_id);
+irqreturn_t FVDIRQ2Service(int irq, void *dev_id);
 
 #define FPGA_IRQ_0      ((3-1)*32 + 16)
 #define FPGA_IRQ_1      ((3-1)*32 + 17) // GPIO3.17
@@ -228,6 +229,20 @@ int  bifrost_fvd_init(struct bifrost_device *dev)
                 ALERT("Failed to request FPGA IRQ1 (%d)\n", rc);
         else
                 INFO("Successfully requested FPGA IRQ1\n");
+
+        if (gpio_is_valid(FPGA_IRQ_2) == 0)
+                ALERT("FPGA_IRQ_2 can not be used\n");
+
+        gpio_request(FPGA_IRQ_2, "FpgaIrq2");
+        gpio_direction_input(FPGA_IRQ_2);
+
+        rc = request_irq(gpio_to_irq(FPGA_IRQ_2), FVDIRQ2Service,
+                IRQF_TRIGGER_FALLING, "FpgaIrq2", bdev);
+
+        if (rc != 0)
+                ALERT("Failed to request FPGA IRQ2 (%d)\n", rc);
+        else
+                INFO("Successfully requested FPGA IRQ2\n");
 
         return 0;
 
@@ -431,6 +446,24 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 
                 bifrost_create_event_in_atomic(dev, &event);
         }
+
+        return IRQ_HANDLED;
+}
+//////////////////////////////////////////////////////////
+// This is the interrupt service thread for HostIntr_n(2)
+//////////////////////////////////////////////////////////
+irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
+{
+        struct bifrost_device *dev = (struct bifrost_device *)dev_id;
+        struct bifrost_event event;
+
+        memset(&event, 0, sizeof(event));
+
+        // Indicate completion
+        event.type = BIFROST_EVENT_TYPE_IRQ;
+        event.data.irq_source = 0x20;
+        getnstimeofday(&event.data.frame.time);
+        bifrost_create_event_in_atomic(dev, &event);
 
         return IRQ_HANDLED;
 }
