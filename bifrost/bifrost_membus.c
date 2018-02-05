@@ -456,10 +456,16 @@ irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
 {
         struct bifrost_device *dev = (struct bifrost_device *)dev_id;
         struct bifrost_event event;
+        u32 liveBufferReg = 0xb9;
+        u32 bufNo;
 
         memset(&event, 0, sizeof(event));
 
-        // Indicate completion
+        membus_read_device_memory(dev->regb[0].handle, liveBufferReg, &bufNo); // last live IR buffer
+        event.data.frame.frameNo = bufNo;
+        event.data.frame.frameSize = 0x96000;
+
+       // Indicate completion
         event.type = BIFROST_EVENT_TYPE_IRQ;
         event.data.irq_source = 0x20;
         getnstimeofday(&event.data.frame.time);
