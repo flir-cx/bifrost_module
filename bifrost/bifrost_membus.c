@@ -412,14 +412,21 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
                 bifrost_create_event_in_atomic(dev, &event);
         }
         else if(mask & vector & 0x200) {  // DIO irq
-                u32 status;
+                u32 status = 0;
+                u32 camtype;
+
+                // Read camera type
+                membus_read_device_memory(dev->regb[0].handle, 0x23, &camtype);  // Cam type
 
                 // Indicate completion
                 event.type = BIFROST_EVENT_TYPE_IRQ;
                 event.data.irq_source = 0x08;
 
-                // Read interrupt mask
-                membus_read_device_memory(dev->regb[0].handle, 0x150, &status);  // Digital IN
+                // Read digital input status
+		if ((camtype & 0xFFFF) == 0x8) // T1K
+                  membus_read_device_memory(dev->regb[0].handle, 0x150, &status);  // Digital IN
+                else if ((camtype & 0xFFFF) == 0x19) // EC501
+                  membus_read_device_memory(dev->regb[0].handle, 0x152, &status);  // Digital IN
 
                 // printk("DIO irq status:%d\n", status);
 
@@ -456,16 +463,47 @@ irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
 {
         struct bifrost_device *dev = (struct bifrost_device *)dev_id;
         struct bifrost_event event;
-        u32 liveBufferReg = 0xb9;
-        u32 bufNo;
+        u32 camtype;
+        u32 bufNo, frameCnt, hd1, hd2, hd3, hd4, hd5;
 
         memset(&event, 0, sizeof(event));
 
-        membus_read_device_memory(dev->regb[0].handle, liveBufferReg, &bufNo); // last live IR buffer
-        event.data.frame.frameNo = bufNo;
-        event.data.frame.frameSize = 0x96000;
+        // Read camera type
+        membus_read_device_memory(dev->regb[0].handle, 0x23, &camtype);  // Cam type
 
-       // Indicate completion
+        if ((camtype & 0xFFFF) == 0x19) // EC501
+        {
+	  // Read frame trig data and line stamp data
+          membus_read_device_memory(dev->regb[0].handle, 0xb9, &bufNo); // last live IR buffer
+          membus_read_device_memory(dev->regb[0].handle, 0x14E, &hd1);
+          membus_read_device_memory(dev->regb[0].handle, 0x14F, &hd2);
+          membus_read_device_memory(dev->regb[0].handle, 0x150, &hd3);
+          membus_read_device_memory(dev->regb[0].handle, 0x151, &hd4);
+          membus_read_device_memory(dev->regb[0].handle, 0x152, &hd5);
+          membus_read_device_memory(dev->regb[0].handle, 0x153, &frameCnt);
+
+	  // Fill in frame data
+          event.data.frame.frameNo = bufNo & 0xF;
+          // Line state
+          if (hd5 & 0x1)
+            event.data.frame.frameNo |= 0x10;
+          if (hd5 & 0x100)
+            event.data.frame.frameNo |= 0x20;
+          // Trig state
+          if (hd1 & 0x1)
+            event.data.frame.frameNo |= 0x40;
+          if (hd1 & 0x100)
+            event.data.frame.frameNo |= 0x80;
+
+          event.data.frame.frameNo |= (hd2 & 0xF << 8);
+          event.data.frame.frameNo |= ((hd3>>16) & 0xF << 12);
+          event.data.frame.frameNo |= (frameCnt << 16);
+
+          // Line time stamps
+          event.data.frame.frameSize = ((hd2>>8)&0xFF) | ((hd3&0xFF) << 8) | ((hd4&0xFFFF) << 16);
+        }
+
+        // Indicate completion
         event.type = BIFROST_EVENT_TYPE_IRQ;
         event.data.irq_source = 0x20;
         getnstimeofday(&event.data.frame.time);
