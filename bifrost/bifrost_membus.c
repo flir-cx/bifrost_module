@@ -495,8 +495,8 @@ irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
           if (hd1 & 0x100)
             event.data.frame.frameNo |= 0x80;
 
-          event.data.frame.frameNo |= (hd2 & 0xF << 8);
-          event.data.frame.frameNo |= ((hd3>>16) & 0xF << 12);
+          event.data.frame.frameNo |= (hd2 & 0xF << 8); // Frame time stamp channel 0
+          event.data.frame.frameNo |= (((hd3>>8) & 0xF) << 12); // Frame time stamp channel 1
           event.data.frame.frameNo |= (frameCnt << 16);
 
           // Line time stamps
