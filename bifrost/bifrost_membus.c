@@ -112,8 +112,12 @@ static int map_device_memory(struct device_memory *mem)
                 return -EINVAL; /* Only two chip selects active */
 
 #ifndef CS0_BASE_ADDR
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#define CS0_BASE_ADDR 0x08000000
+#else
 #define CS0_BASE_ADDR 0
         ALERT("CS0_BASE_ADDR undefined\n");
+#endif
 #endif
 
         mem->addr_bus = CS0_BASE_ADDR + (mem->bar * 0x02000000);
