@@ -388,13 +388,19 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 
         // printk("irg1:0x%04x, vec:0x%04x mask:0x%04x\n", irq, vector, mask);
 
+        if (mask & vector & 0x10) {     // Board execute irq
+                // Indicate completion
+                event.type = BIFROST_EVENT_TYPE_IRQ;
+                event.data.irq_source = 0x40;
+                bifrost_create_event_in_atomic(dev, &event);
+        }
         if (mask & vector & 0x20) {       // HSI (BOB) irq
                 // Indicate completion
                 event.type = BIFROST_EVENT_TYPE_IRQ;
                 event.data.irq_source = 0x02;
                 bifrost_create_event_in_atomic(dev, &event);
         }
-        else if(mask & vector & 0x100) {  // JPEGLS irq
+        if (mask & vector & 0x100) {  // JPEGLS irq
                 u32 frameNo, frameSize;
                 u32 frameSizeReg = 0x171;
 
@@ -417,7 +423,7 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 
                 bifrost_create_event_in_atomic(dev, &event);
         }
-        else if(mask & vector & 0x200) {  // DIO irq
+        if (mask & vector & 0x200) {  // DIO irq
                 u32 status = 0;
                 u32 camtype;
 
@@ -440,7 +446,7 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 
                 bifrost_create_event_in_atomic(dev, &event);
         }
-        else if(mask & vector & 0x400) {  // HSI cable irq
+        if (mask & vector & 0x400) {  // HSI cable irq
                 u32 hsi_state;
                 u32 cable_state;
 
