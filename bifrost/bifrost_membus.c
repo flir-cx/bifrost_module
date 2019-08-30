@@ -435,9 +435,11 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
                 event.data.irq_source = 0x08;
 
                 // Read digital input status
-		if ((camtype & 0xFFFF) == 0x8) // T1K
+                if ((camtype & 0xFFFF) == 0x8) // T1K
                   membus_read_device_memory(dev->regb[0].handle, 0x150, &status);  // Digital IN
                 else if ((camtype & 0xFFFF) == 0x19) // EC501
+                  membus_read_device_memory(dev->regb[0].handle, 0x152, &status);  // Digital IN
+                else if ((camtype & 0xFFFF) == 0x1F) // EC501 i3
                   membus_read_device_memory(dev->regb[0].handle, 0x152, &status);  // Digital IN
 
                 // printk("DIO irq status:%d\n", status);
@@ -483,9 +485,10 @@ irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
         // Read camera type
         membus_read_device_memory(dev->regb[0].handle, 0x23, &camtype);  // Cam type
 
-        if ((camtype & 0xFFFF) == 0x19) // EC501
+        if (((camtype & 0xFFFF) == 0x19) ||  // EC501
+            ((camtype & 0xFFFF) == 0x1F))    // EC501 i3
         {
-	  // Read frame trig data and line stamp data
+          // Read frame trig data and line stamp data
           membus_read_device_memory(dev->regb[0].handle, 0xb9, &bufNo); // last live IR buffer
           membus_read_device_memory(dev->regb[0].handle, 0x14E, &hd1);
           membus_read_device_memory(dev->regb[0].handle, 0x14F, &hd2);
@@ -494,7 +497,7 @@ irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
           membus_read_device_memory(dev->regb[0].handle, 0x152, &hd5);
           membus_read_device_memory(dev->regb[0].handle, 0x153, &frameCnt);
 
-	  // Fill in frame data
+          // Fill in frame data
           event.data.frame.frameNo = bufNo & 0xF;
           // Line state
           if (hd5 & 0x1)
