@@ -33,18 +33,31 @@ struct dma_ctl {
 
 static s64 get_xfer_time_ns(struct timespec *start)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+    ktime_t kstart, kstop, kinterval;
+    kstart = timespec_to_ktime(*start);
+    kstop = ktime_get();
+    kinterval = ktime_sub(kstop, kstart);
+
+    return (s64) ktime_to_ns(kinterval);
+#else
         struct timespec stop, ts;
 
         getnstimeofday(&stop);
         ts = timespec_sub(stop, *start);
 
         return timespec_to_ns(&ts);
+#endif
 }
 
 static void kick_off_xfer(struct dma_ctl *ctl, int ch, struct dma_req *req)
 {
-        getnstimeofday(&req->ts);
-        ctl->start_xfer(ctl->data, ch, req->src, req->dst, req->len, req->dir);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+    req->ts = ktime_to_timespec(ktime_get());
+#else
+    getnstimeofday(&req->ts);
+#endif
+    ctl->start_xfer(ctl->data, ch, req->src, req->dst, req->len, req->dir);
 }
 
 static int get_ticket(void)

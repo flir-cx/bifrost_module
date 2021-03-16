@@ -21,8 +21,14 @@
 #include <linux/pci.h>
 #include <linux/interrupt.h>
 #include <linux/time.h>
+#include <linux/version.h>
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+#include <linux/uaccess.h>
+#else
 #include <asm/uaccess.h>
+#endif
+
 #include <asm/byteorder.h>
 #include <asm/atomic.h>
 

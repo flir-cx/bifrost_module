@@ -634,7 +634,12 @@ int __devinit bifrost_pci_probe(struct pci_dev *pdev, const struct pci_device_id
         /* Enable message signaled interrupts (MSI) */
         if(platform_fvd())
             msi_interrupts = 1;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+        rc = pci_enable_msi(pdev);
+/*      Could try this that should be more according to msi-howto.rst
+        rc = pci_alloc_irq_vectors(pdev, 1, msi_interrupts, PCI_IRQ_ALL_TYPES);
+*/
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
         rc = pci_enable_msi_block(pdev,msi_interrupts);
 #else
         rc = pci_enable_msi(pdev);
