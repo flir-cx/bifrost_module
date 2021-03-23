@@ -23,6 +23,10 @@
 
 #define BIFROST_IOC_MAGIC 'B'
 
+#ifndef LINUX_VERSION_CODE
+  ALERT("LINUX_VERSION_CODE undefined\n");
+#endif
+
 struct bifrost_info {
         struct {
                 __u8 major;
@@ -96,7 +100,11 @@ struct bifrost_membus_frame {
                                     the event struct. */
         __u32 frameNo;         /* Buffer number where we can find the frame. */
         __u32 frameSize;       /* Size of the compressed frame. */
-        struct timespec time;  /* time stamp when we got the irq. */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+        struct timespec64 time; /* time stamp when we got the irq. */
+#else
+        struct timespec time;    /* time stamp when we got the irq. */
+#endif
 };
 
 /*
@@ -141,8 +149,13 @@ struct bifrost_event {
                 struct bifrost_membus_frame frame;
         } data;
         struct {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+                struct timespec64 received;
+                struct timespec64 forwarded;
+#else
                 struct timeval received;
                 struct timeval forwarded;
+#endif
         } timestamp;
 };
 

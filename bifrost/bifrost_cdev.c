@@ -300,8 +300,8 @@ void bifrost_create_event(struct bifrost_device *dev,
         struct list_head *pos, *tmp;
         struct bifrost_event_cont *p;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
-        event->timestamp.received = ktime_to_timeval(ktime_get());
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+        ktime_get_ts64(&event->timestamp.received);
 #else
         do_gettimeofday(&event->timestamp.received);
 #endif
@@ -813,8 +813,8 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
                 p = dequeue_event(hnd);
                 if (p == NULL)
                         return -EINVAL;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
-                p->event.timestamp.forwarded = ktime_to_timeval(ktime_get());
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+                ktime_get_ts64(&p->event.timestamp.forwarded);
 #else
 		do_gettimeofday(&p->event.timestamp.forwarded);
 #endif
@@ -944,7 +944,7 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
         return rc;
 }
 
-#ifndef HAVE_UNLOCKED_IOCTL
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(5,9,0)) && !defined(HAVE_UNLOCKED_IOCTL)
 static int bifrost_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
                          unsigned long arg)
 {
@@ -962,7 +962,7 @@ static struct file_operations bifrost_fops = {
         .release = bifrost_release,
         .mmap = bifrost_mmap,
         .poll = bifrost_poll,
-#ifdef HAVE_UNLOCKED_IOCTL
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0)) || defined(HAVE_UNLOCKED_IOCTL)
         .unlocked_ioctl = bifrost_unlocked_ioctl,
 #else
         .ioctl = bifrost_ioctl,

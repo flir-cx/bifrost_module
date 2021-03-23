@@ -121,7 +121,11 @@ static int map_device_memory(struct device_memory *mem)
 #endif
 
         mem->addr_bus = CS0_BASE_ADDR + (mem->bar * 0x02000000);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+        mem->addr = ioremap(mem->addr_bus, SZ_4K);
+#else
         mem->addr = ioremap_nocache(mem->addr_bus, SZ_4K);
+#endif
         if (mem->addr == NULL) {
                 ALERT("Map BAR%d region failed (%08lx - %08lx)\n",
                       mem->bar, mem->addr_bus, mem->addr_bus + mem->size - 1);
@@ -417,7 +421,11 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
                 membus_read_device_memory(dev->regb[0].handle, frameSizeReg, &frameSize);    // JLSBufferSize
                 event.data.frame.frameNo = frameNo;
                 event.data.frame.frameSize = frameSize;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+                ktime_get_ts64(&event.data.frame.time);
+#else
                 getnstimeofday(&event.data.frame.time);
+#endif
 
                 // printk("lastbuf:%d, size:%d\n", frameNo, frameSize);
 
@@ -521,7 +529,11 @@ irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
         // Indicate completion
         event.type = BIFROST_EVENT_TYPE_IRQ;
         event.data.irq_source = 0x20;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+        ktime_get_ts64(&event.data.frame.time);
+#else
         getnstimeofday(&event.data.frame.time);
+#endif
         bifrost_create_event_in_atomic(dev, &event);
 
         return IRQ_HANDLED;

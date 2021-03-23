@@ -6,8 +6,15 @@
 #include <linux/time.h>
 #include <linux/types.h>
 #include <linux/completion.h>
+#include <linux/version.h>
 
 typedef void (*dma_xfer_t)(void *, u32, u32, u32, u32, u32);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+  #define TIMETYPE ktime_t
+#else
+  #define TIMETYPE struct timespec
+#endif
 
 struct dma_req {
         u32 src;
@@ -19,7 +26,7 @@ struct dma_req {
         struct list_head node;
         int ticket;
         void *cookie;
-        struct timespec ts;
+        TIMETYPE ts;
         struct completion *pwork;
 };
 

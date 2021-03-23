@@ -31,29 +31,27 @@ struct dma_ctl {
         dma_xfer_t start_xfer;
 };
 
-static s64 get_xfer_time_ns(struct timespec *start)
+static s64 get_xfer_time_ns(TIMETYPE *start)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
-    ktime_t kstart, kstop, kinterval;
-    kstart = timespec_to_ktime(*start);
-    kstop = ktime_get();
-    kinterval = ktime_sub(kstop, kstart);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+    ktime_t kstop, kinterval;
 
+    kstop = ktime_get();
+    kinterval = ktime_sub(kstop, *start);
     return (s64) ktime_to_ns(kinterval);
 #else
-        struct timespec stop, ts;
+    struct timespec stop, ts;
 
-        getnstimeofday(&stop);
-        ts = timespec_sub(stop, *start);
-
-        return timespec_to_ns(&ts);
+    getnstimeofday(&stop);
+    ts = timespec_sub(stop, *start);
+    return timespec_to_ns(&ts);
 #endif
 }
 
 static void kick_off_xfer(struct dma_ctl *ctl, int ch, struct dma_req *req)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
-    req->ts = ktime_to_timespec(ktime_get());
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
+    req->ts = ktime_get();
 #else
     getnstimeofday(&req->ts);
 #endif
