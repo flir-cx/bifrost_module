@@ -11,7 +11,7 @@
 typedef void (*dma_xfer_t)(void *, u32, u32, u32, u32, u32);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
-  #define TIMETYPE ktime_t
+  #define TIMETYPE struct __kernel_old_timespec
 #else
   #define TIMETYPE struct timespec
 #endif

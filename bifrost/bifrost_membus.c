@@ -422,7 +422,12 @@ irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
                 event.data.frame.frameNo = frameNo;
                 event.data.frame.frameSize = frameSize;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
-                ktime_get_ts64(&event.data.frame.time);
+                {
+                    struct timespec64 ts64;
+                    ktime_get_ts64(&ts64);
+                    event.data.frame.time.tv_sec = (__kernel_old_time_t) ts64.tv_sec;
+                    event.data.frame.time.tv_nsec = (long) ts64.tv_nsec;
+                }
 #else
                 getnstimeofday(&event.data.frame.time);
 #endif
@@ -530,7 +535,12 @@ irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
         event.type = BIFROST_EVENT_TYPE_IRQ;
         event.data.irq_source = 0x20;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
-        ktime_get_ts64(&event.data.frame.time);
+        {
+            struct timespec64 ts64;
+            ktime_get_ts64(&ts64);
+            event.data.frame.time.tv_sec = (__kernel_old_time_t) ts64.tv_sec;
+            event.data.frame.time.tv_nsec = (long) ts64.tv_nsec;
+        }
 #else
         getnstimeofday(&event.data.frame.time);
 #endif

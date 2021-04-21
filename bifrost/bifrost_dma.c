@@ -35,9 +35,13 @@ static s64 get_xfer_time_ns(TIMETYPE *start)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
     ktime_t kstop, kinterval;
+    struct timespec64 start64;
+    
+    start64.tv_sec = start->tv_sec;
+    start64.tv_nsec = start->tv_nsec;
 
     kstop = ktime_get();
-    kinterval = ktime_sub(kstop, *start);
+    kinterval = ktime_sub(kstop, timespec64_to_ktime(start64));
     return (s64) ktime_to_ns(kinterval);
 #else
     struct timespec stop, ts;
@@ -51,7 +55,10 @@ static s64 get_xfer_time_ns(TIMETYPE *start)
 static void kick_off_xfer(struct dma_ctl *ctl, int ch, struct dma_req *req)
 {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
-    req->ts = ktime_get();
+    struct timespec64 ts64;
+    ktime_get_ts64(&ts64);
+    req->ts.tv_sec = (__kernel_old_time_t) ts64.tv_sec;
+    req->ts.tv_nsec = (long) ts64.tv_nsec;
 #else
     getnstimeofday(&req->ts);
 #endif

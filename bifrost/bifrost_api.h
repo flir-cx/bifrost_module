@@ -17,6 +17,8 @@
 #include <linux/time.h>
 #else
 #include <sys/time.h>
+#include <linux/time_types.h>
+#include <linux/version.h>
 #endif
 #include <linux/ioctl.h>
 #include <linux/types.h>
@@ -101,7 +103,7 @@ struct bifrost_membus_frame {
         __u32 frameNo;         /* Buffer number where we can find the frame. */
         __u32 frameSize;       /* Size of the compressed frame. */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
-        struct timespec64 time; /* time stamp when we got the irq. */
+        struct __kernel_old_timespec time; /* time stamp when we got the irq. */
 #else
         struct timespec time;    /* time stamp when we got the irq. */
 #endif
@@ -150,8 +152,8 @@ struct bifrost_event {
         } data;
         struct {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,10,0)
-                struct timespec64 received;
-                struct timespec64 forwarded;
+                struct __kernel_old_timeval received;
+                struct __kernel_old_timeval forwarded;
 #else
                 struct timeval received;
                 struct timeval forwarded;
