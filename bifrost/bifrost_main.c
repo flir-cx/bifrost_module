@@ -415,6 +415,7 @@ static int __init bifrost_init(void)
          * parent dir)
          */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	/* No proc entry */
 #else
         bdev->proc = create_proc_read_entry(BIFROST_DEVICE_NAME, 0, NULL,
                                                   bifrost_procfs_read,
@@ -424,7 +425,8 @@ static int __init bifrost_init(void)
                 ALERT("failed to add proc fs entry\n");
                 goto err_proc;
         }
- #endif
+#endif
+
         if (bdev->info.simulator) {
                 if (bifrost_sim_pci_init(bdev) < 0)
                         goto err_pci;
@@ -456,8 +458,12 @@ static int __init bifrost_init(void)
         return 0;
 
   err_pci:
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	/* No proc entry */
+#else
         remove_proc_entry(BIFROST_DEVICE_NAME, NULL);
   err_proc:
+#endif
         flush_workqueue(work_queue);
         destroy_workqueue(work_queue);
         mempool_destroy(work_pool);
