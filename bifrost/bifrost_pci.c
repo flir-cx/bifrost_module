@@ -312,12 +312,16 @@ int bifrost_dma_init(int irq, struct bifrost_device *dev)
         struct device_memory *mem;
         u32 val;
 
-        if(platform_rocky())
-            dev->regb_dma = &dev->regb[3];
-        else if(platform_evander())
-            dev->regb_dma = &dev->regb[2];
-        else
-            dev->regb_dma = &dev->regb[0];
+	if (platform_rocky()) {
+		INFO("Rocky platform, Selecting bar 3\n");
+		dev->regb_dma = &dev->regb[3];
+	} else if (platform_evander() || platform_eoco()) {
+		INFO("Evander/Eoco platform, Selecting bar 2\n");
+		dev->regb_dma = &dev->regb[2];
+	} else {
+		INFO("Unknown platform, Selecting bar 0\n");
+		dev->regb_dma = &dev->regb[0];
+	}
         mem = dev->regb_dma;
 
 		mem->rd(mem->handle, VALHALLA_ADDR_DMA_CAPABILITY, &val);
