@@ -756,6 +756,7 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
         case BIFROST_IOCTL_START_DMA_UP_USER:
         case BIFROST_IOCTL_START_DMA_DOWN_USER:
             flags =  BIFROST_DMA_USER_BUFFER;
+            /* fall through */
         case BIFROST_IOCTL_START_DMA_UP:
         case BIFROST_IOCTL_START_DMA_DOWN:
         {

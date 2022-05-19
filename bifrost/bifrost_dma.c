@@ -188,13 +188,14 @@ int start_dma_xfer(struct dma_ctl *ctl, struct dma_req *req)
 
 void add_stats(struct bifrost_device *dev,struct dma_req *req,s64 time)
 {
-    s64 speed ;
+    u64 speed, tmp ;
     if(!time)
         return;
 
+    tmp = (u64)time;
     //biggest transfer for not overflowing calculation =16GB
-    speed  = (s64)req->len *  NSEC_PER_SEC;
-    do_div(speed,(u32)time); //longest transfer ok for casting =4s
+    speed  = (u64)req->len *  NSEC_PER_SEC;
+    do_div(speed,tmp); //longest transfer ok for casting =4s
 
     switch(req->dir)
     {
