@@ -482,17 +482,17 @@ static void __exit bifrost_exit(void)
 #else
         remove_proc_entry(BIFROST_DEVICE_NAME, NULL);
 #endif
-
         bifrost_cdev_exit(bdev);
-        bdev->ops->free_dma_buffer(&bdev->scratch);
         bifrost_dma_cleanup(bdev);
 
-        if (bdev->info.simulator)
+        if (bdev->info.simulator) {
+            bdev->ops->free_dma_buffer(&bdev->scratch);
             bifrost_sim_pci_exit(bdev);
-        else if (bdev->membus)
+        } else if (bdev->membus) {
             bifrost_membus_exit(bdev);
-        else
+        } else {
             bifrost_pci_exit(bdev);
+        }
 
         flush_workqueue(work_queue);
         destroy_workqueue(work_queue);
