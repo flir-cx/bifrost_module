@@ -3,6 +3,10 @@
 *.ko
 *.symvers
 *.order
+*.mod
 *.mod.c
 **/.tmp_versions
 prepare.arch
+
+oe-logs
+oe-workdir
