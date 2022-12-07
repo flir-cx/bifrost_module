@@ -66,6 +66,9 @@ int bifrost_cdev_init(struct bifrost_device *dev)
                 return rc;
         }
 
+        bdev->pClass = class_create(THIS_MODULE, BIFROST_DEVICE_NAME);
+        device_create(bdev->pClass, NULL, bdev->cdev.dev, NULL, "bif0");
+
         dev->cdev_initialized = 1;
 
         return 0;
@@ -87,6 +90,9 @@ void __exit bifrost_cdev_exit(struct bifrost_device *dev)
         if (saved_dma_buf.virt)
             dma_free_coherent(&pcd_dev->dev, saved_dma_buf.size,
                               saved_dma_buf.virt, saved_dma_buf.phy);
+
+        device_destroy(dev->pClass, dev->cdev.dev);
+        class_destroy(dev->pClass);
 
         cdev_del(&dev->cdev);
         unregister_chrdev_region(bifrost_dev_no, 1);

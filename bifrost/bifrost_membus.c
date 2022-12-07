@@ -207,9 +207,6 @@ int  bifrost_fvd_init(struct bifrost_device *dev)
         }
         platform_device_add(bdev->pMemDev);
 
-        bdev->pClass = class_create(THIS_MODULE, BIFROST_DEVICE_NAME);
-        device_create(bdev->pClass, NULL, bdev->cdev.dev, NULL, "bif0");
-
         if (gpio_is_valid(FPGA_IRQ_0) == 0)
                 ALERT("FPGA_IRQ_0 can not be used\n");
 
@@ -269,8 +266,6 @@ void bifrost_fvd_exit(struct bifrost_device *dev)
         gpio_free(FPGA_IRQ_1);
         free_irq(gpio_to_irq(FPGA_IRQ_2), bdev);
         gpio_free(FPGA_IRQ_2);
-        device_destroy(dev->pClass, dev->cdev.dev);
-        class_destroy(dev->pClass);
         platform_device_unregister(dev->pMemDev);
 }
 

@@ -300,10 +300,6 @@ int bifrost_pci_probe_post_init(struct pci_dev *pdev)
                 goto err_alloc;
         }
 
-
-       if (bifrost_cdev_init(bdev) != 0)
-            goto err_alloc;
-
        if (platform_fvd() && bifrost_fvd_init(bdev) != 0)
             goto err_alloc;
 
@@ -437,6 +433,7 @@ static int __init bifrost_init(void)
                     bifrost_sim_pci_exit(bdev);
                     goto err_pci;
                 }
+
         } else if (bdev->membus) {
                 bdev->ops = &bifrost_ops;
 
@@ -453,6 +450,8 @@ static int __init bifrost_init(void)
                 if (bifrost_pci_init(bdev) != 0)
                     goto err_pci;
         }
+        if (bifrost_cdev_init(bdev))
+            goto err_pci;
 
         INFO("init done\n");
         return 0;
