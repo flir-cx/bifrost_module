@@ -10,3 +10,9 @@ prepare.arch
 
 oe-logs
 oe-workdir
+
+# gnu global files
+GPATH
+GRTAGS
+GSYMS
+GTAGS
