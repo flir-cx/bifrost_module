@@ -212,21 +212,6 @@ static unsigned int bifrost_poll(struct file *file, poll_table *wait)
         return v;
 }
 
-/**
- * Handler for file operation mmap(). Will map common DMA'able scratch buffer.
- *
- * @param file
- * @param vma
- * @return 0 on success.
- */
-static int bifrost_mmap(struct file *file, struct vm_area_struct *vma)
-{
-        struct bifrost_user_handle *hnd = file->private_data;
-        struct bifrost_device *dev = hnd->dev;
-
-        return dev->ops->remap_pfn_range(dev, vma);
-}
-
 static struct bifrost_event_cont *dequeue_event(struct bifrost_user_handle *h)
 {
         struct bifrost_event_cont *p;
@@ -967,7 +952,6 @@ static struct file_operations bifrost_fops = {
         .owner = THIS_MODULE,
         .open = bifrost_open,
         .release = bifrost_release,
-        .mmap = bifrost_mmap,
         .poll = bifrost_poll,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,9,0)) || defined(HAVE_UNLOCKED_IOCTL)
         .unlocked_ioctl = bifrost_unlocked_ioctl,

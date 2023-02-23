@@ -105,31 +105,10 @@ struct bifrost_stats {
 };
 
 /*
- * DMA status
- */
-struct dma_status {
-        unsigned long busy;             /* busy bits */
-        size_t transfer_size;
-};
-
-/*
  * place holder for timers
  */
 struct timers {
         struct timer_list debug;        /* periodic debug timer */
-};
-
-/*
- * DMA'able memory buffer (coherent memory)
- */
-struct dma_buffer {
-        void *addr;              /* Kernel virtual address of buffer (CPU address) */
-        unsigned long addr_phys; /* physical address of buffer */
-        dma_addr_t addr_bus;     /* bus address of buffer */
-        size_t size;             /* size of allocated memory in bytes (a multiple of PAGE_SIZE) */
-        size_t length;           /* length (size) of data actually stored in the buffer */
-        struct pci_dev *pdev;
-        int vmas;                /* number of active VMA mappings */
 };
 
 /*
@@ -155,15 +134,6 @@ struct device_memory {
 };
 
 struct bifrost_device;
-struct bifrost_operations {
-        int (*alloc_dma_buffer)(struct dma_buffer *buf,
-                                size_t size,
-                                struct pci_dev *pdev);
-        void (*free_dma_buffer)(struct dma_buffer *buf);
-
-        int (*remap_pfn_range)(struct bifrost_device *dev,
-                               struct vm_area_struct *vma);
-};
 
 /*
  * Bifrost device representation
@@ -182,13 +152,10 @@ struct bifrost_device {
         struct device_memory regb[6];   /* FPGA register bank (PCIe => max 6 BARs) */
         struct device_memory* regb_dma;   /* BAR used for DMA registers*/
         struct device_memory ddr;       /* FPGA DDR memory */
-        struct dma_buffer scratch;      /* general DMA'able scratch buffer */
-        struct dma_status dma_status;
 
         /* TODO add segments instead */
         struct bifrost_simulator simulator;
 
-        struct bifrost_operations *ops;
         struct dma_ctl *dma_ctl;
 
         /* Membus addons */
@@ -235,8 +202,6 @@ void bifrost_create_event(struct bifrost_device *dev,
                           struct bifrost_event *event);
 void bifrost_create_event_in_atomic(struct bifrost_device *dev,
                                     struct bifrost_event *event);
-
-extern struct bifrost_operations bifrost_sim_ops;
 
 int bifrost_attach_msis_to_irq(int hw_irq, struct bifrost_device *dev);
 void bifrost_detach_msis(void);

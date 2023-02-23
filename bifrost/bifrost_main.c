@@ -158,80 +158,6 @@ static int bifrost_procfs_read(char *page, char **start, off_t offset,
         return len;
 }
 #endif
-static int bifrost_alloc_dma_buffer(struct dma_buffer *buf, size_t size,
-                                    struct pci_dev *pdev)
-{
-        size = PAGE_ALIGN(size);
-
-        /*
-         * See "Documentation/PCI/PCI-DMA-mapping.txt" for more information
-         * regarding consistent/coherent DMA mappings.
-         */
-        buf->addr = pci_alloc_consistent(pdev, size, &buf->addr_bus);
-        if (buf->addr == NULL)
-                return -ENOMEM;
-
-        buf->addr_phys = virt_to_phys(buf->addr);
-        buf->pdev = pdev;
-        buf->size = size;
-        buf->length = 0;
-
-        /*
-         * Clear memory to prevent kernel info leakage into user-space
-         */
-        memset(buf->addr, 0, buf->size);
-
-        /*
-         * Alternatively for non-PCI buffers:
-         * buf->addr = dma_alloc_coherent(0, size, &buf->addr_bus,
-         *                                GFP_DMA | GFP_KERNEL);
-         */
-
-        INFO("DMA buffer allocated physical=0x%08lX bus=0x%08lX size=%dKiB\n",
-                buf->addr_phys, (unsigned long)buf->addr_bus, buf->size / 1024);
-        return 0;
-}
-
-static void bifrost_free_dma_buffer(struct dma_buffer *buf)
-{
-        if (buf && buf->addr)
-                pci_free_consistent(buf->pdev, buf->size, buf->addr,
-                                    buf->addr_bus);
-}
-
-static int bifrost_remap_pfn_range(struct bifrost_device *dev,
-                                   struct vm_area_struct *vma)
-{
-        unsigned long start = vma->vm_start;
-        unsigned long size = vma->vm_end - vma->vm_start;
-        unsigned long offset = vma->vm_pgoff << PAGE_SHIFT;
-        unsigned long pfn;
-
-        INFO("mmap() start=%08lX offset=%08lX size=%08lX\n", start,
-             offset, size);
-
-        if (offset + size > dev->scratch.size) {
-                INFO("Request to mmap() %ld bytes starting at %ld, but only "
-                     "%d total is available\n", size, offset,
-                     dev->scratch.size);
-                return -EINVAL;
-        }
-
-        /*
-         * Build page table to map physical memory to virtual memory.
-         * Shift physical address using PAGE_SHIFT to get page frame
-         * number (pfn). Use io_remap_* for portability, same as
-         * remap_pfn_range() on most systems
-         */
-        pfn = virt_to_phys((void *)bdev->scratch.addr) >> PAGE_SHIFT;
-        return io_remap_pfn_range(vma, start, pfn, size, vma->vm_page_prot);
-}
-
-struct bifrost_operations bifrost_ops = {
-        .alloc_dma_buffer = bifrost_alloc_dma_buffer,
-        .free_dma_buffer = bifrost_free_dma_buffer,
-        .remap_pfn_range = bifrost_remap_pfn_range,
-};
 
 void bifrost_dma_chan_start(void *data, u32 ch, u32 src, u32 dst, u32 len,
                             u32 dir)
@@ -281,25 +207,6 @@ int bifrost_pci_probe_post_init(struct pci_dev *pdev)
                 goto err_dma;
         }
 
-        /*
-         * Allocate all memory that we need for our DMA'able memory buffers,
-         * that is allocate and map coherently-cached memory
-         *
-         * IMPORTANT when we allocate memory that should be reachable from PCI
-         * device it is necessary to provide the proper pci_dev handle to get
-         * the correct bus address (even though it is the same as the physical
-         * address on _most_ systems).
-         *
-         * So when test is enabled, meaning no PCI device, we allocate directly
-         * here. When there is real PCI hardware the memory is allocated in PCI
-         * probe function.
-         */
-        rc = bdev->ops->alloc_dma_buffer(&bdev->scratch, 1024 * 4, pdev);
-        if (rc != 0) {
-                ALERT("Allocating scratch buffer memory failed\n");
-                goto err_alloc;
-        }
-
        if (platform_fvd() && bifrost_fvd_init(bdev) != 0)
             goto err_alloc;
 
@@ -307,7 +214,6 @@ int bifrost_pci_probe_post_init(struct pci_dev *pdev)
         return 0;
 
   err_alloc:
-        bdev->ops->free_dma_buffer(&bdev->scratch);
         bifrost_dma_cleanup(bdev);
   err_dma:
         bifrost_detach_msis();
@@ -426,7 +332,6 @@ static int __init bifrost_init(void)
         if (bdev->info.simulator) {
                 if (bifrost_sim_pci_init(bdev) < 0)
                         goto err_pci;
-                bdev->ops = &bifrost_sim_ops;
 
                 /* Continue to initialize driver without real PCI support */
                 if (bifrost_pci_probe_post_init(NULL) != 0) {
@@ -435,7 +340,6 @@ static int __init bifrost_init(void)
                 }
 
         } else if (bdev->membus) {
-                bdev->ops = &bifrost_ops;
 
                 /* Simulator interface disabled, register as real Membus driver */
                 if (bifrost_membus_init(bdev) != 0)
@@ -444,7 +348,6 @@ static int __init bifrost_init(void)
                     goto err_pci;
                 }
         } else {
-                bdev->ops = &bifrost_ops;
 
                 /* Simulator interface disabled, register as real PCI driver */
                 if (bifrost_pci_init(bdev) != 0)
@@ -485,7 +388,6 @@ static void __exit bifrost_exit(void)
         bifrost_dma_cleanup(bdev);
 
         if (bdev->info.simulator) {
-            bdev->ops->free_dma_buffer(&bdev->scratch);
             bifrost_sim_pci_exit(bdev);
         } else if (bdev->membus) {
             bifrost_membus_exit(bdev);

@@ -726,7 +726,6 @@ void bifrost_pci_remove(struct pci_dev *pdev)
         bifrost_detach_msis();
         pci_disable_msi(pdev);
         remove_io_regions(bdev);
-        bdev->ops->free_dma_buffer(&bdev->scratch);
         pci_iounmap(pdev, bdev->ddr.addr);
         pci_release_regions(pdev);
         pci_disable_device(pdev);
