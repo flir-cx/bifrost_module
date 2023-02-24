@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
  * Copyright (c) FLIR Systems AB.
  */
@@ -9,7 +10,7 @@
 extern bool platform_fvd(void);
 extern bool platform_evander(void);
 extern bool platform_rocky(void);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+#if KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE
 extern bool platform_eoco(void);
 #endif
 

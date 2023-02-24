@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) FLIR Systems AB.
  */
@@ -5,8 +6,9 @@
 #include "bifrost_platform.h"
 
 /* This version 5.4 is not exact - using dts information like this would
- * work also for earlier kernels */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+ * work also for earlier kernels
+ */
+#if KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE
 #include <linux/of.h>
 bool platform_rocky(void)
 {
@@ -28,7 +30,7 @@ bool platform_fvd(void)
 	return platform_rocky() || platform_evander() || platform_eoco();
 }
 
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0))
+#elif (KERNEL_VERSION(3, 10, 0) <= LINUX_VERSION_CODE)
 #include "../arch/arm/mach-imx/hardware.h"
 
 bool platform_rocky(void)
@@ -38,7 +40,7 @@ bool platform_rocky(void)
 
 bool platform_evander(void)
 {
-	return cpu_is_imx6dl() ;
+	return cpu_is_imx6dl();
 }
 
 bool platform_fvd(void)

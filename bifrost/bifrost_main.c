@@ -1,10 +1,9 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
  * Copyright (c) FLIR Systems AB.
  *
- * bifrost_main.c
- *
  *  Created on: Mar 1, 2010
- *      Author: Jonas Romfelt <jonas.romfelt@flir.se>
+ *	Author: Jonas Romfelt <jonas.romfelt@flir.se>
  *
  * Main driver file that implements entry and exit points.
  *
@@ -23,14 +22,15 @@
 #include <linux/time.h>
 #include <linux/version.h>
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,4,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0)
 #include <linux/uaccess.h>
+#include <linux/atomic.h>
 #else
 #include <asm/uaccess.h>
+#include <asm/atomic.h>
 #endif
 
 #include <asm/byteorder.h>
-#include <asm/atomic.h>
 
 #include "bifrost.h"
 #include "valhalla_dma.h"
@@ -42,14 +42,14 @@ struct bifrost_device *bdev;
  * Module parameters
  */
 
-static u32 simulator = 0;
-module_param(simulator, uint, S_IRUSR);
+static u32 simulator;
+module_param(simulator, uint, 0400);
 MODULE_PARM_DESC(simulator, "Enable simulator interface");
 
-static u32 membus = 0;
-module_param(membus, uint, S_IRUSR);
+static u32 membus;
+module_param(membus, uint, 0400);
 MODULE_PARM_DESC(membus, "Enable memory bus interface to FPGA (instead of PCI)");
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,10,0)
+#if KERNEL_VERSION(3, 10, 0) > LINUX_VERSION_CODE
 static int device_mem_info(struct bifrost_device *dev, char *buf, size_t bufsz)
 {
 	int bar, len, n;
@@ -89,95 +89,95 @@ static int device_mem_info(struct bifrost_device *dev, char *buf, size_t bufsz)
  * @return 0 to indicate that there is no more data to read.
  */
 static int bifrost_procfs_read(char *page, char **start, off_t offset,
-                               int page_size, int *eof, void *data)
+			       int page_size, int *eof, void *data)
 {
-        struct bifrost_device *dev = (struct bifrost_device *)data;
-        int len;
+	struct bifrost_device *dev = (struct bifrost_device *)data;
+	int len;
 
-        INFO("read /proc/%s\n", BIFROST_DEVICE_NAME);
-        dev->stats.procfsreads++;
+	INFO("read /proc/%s\n", BIFROST_DEVICE_NAME);
+	dev->stats.procfsreads++;
 
-        /*
-         * Driver gives all information in one go, hence if user requests
-         * more information return EOF.
-         */
-        if (offset > 0) {
-                *eof = 1;
-                return 0;
-        }
+	/*
+	 * Driver gives all information in one go, hence if user requests
+	 * more information return EOF.
+	 */
+	if (offset > 0) {
+		*eof = 1;
+		return 0;
+	}
 
-        len = snprintf(page, page_size,
-                       "Device name              : %s\n"
-                       "Driver version           : %d.%d.%d%s\n"
-                       "Build timestamp          : "__DATE__" "__TIME__"\n"
-                       "Mode                     : %s\n"
-                       "Interface                : %s\n",
-                       BIFROST_DEVICE_NAME,
-                       BIFROST_VERSION_MAJOR,
-                       BIFROST_VERSION_MINOR,
-                       BIFROST_VERSION_MICRO,
-                       BIFROST_VERSION_APPEND_STR,
-                       dev->info.simulator == 1 ? "simulator" : "normal",
-                       dev->membus == 1 ? "memory bus" : "PCIe");
+	len = snprintf(page, page_size,
+		       "Device name		 : %s\n"
+		       "Driver version		 : %d.%d.%d%s\n"
+		       "Build timestamp		 : "__DATE__" "__TIME__"\n"
+		       "Mode			 : %s\n"
+		       "Interface		 : %s\n",
+		       BIFROST_DEVICE_NAME,
+		       BIFROST_VERSION_MAJOR,
+		       BIFROST_VERSION_MINOR,
+		       BIFROST_VERSION_MICRO,
+		       BIFROST_VERSION_APPEND_STR,
+		       dev->info.simulator == 1 ? "simulator" : "normal",
+		       dev->membus == 1 ? "memory bus" : "PCIe");
 
-        len += device_mem_info(dev, &page[len], page_size - len);
+	len += device_mem_info(dev, &page[len], page_size - len);
 
-        len += snprintf(&page[len], page_size - len,
-                        "Open ops.                : %ld\n"
-                        "Release ops.             : %ld\n"
-                        "Poll ops.                : %ld\n"
-                        "Read buffer size         : %d\n"
-                        "Read buffer head         : %d\n"
-                        "Read buffer tail         : %d\n"
-                        "Read buffer overruns     : %d\n"
-                        "Read ops.                : %ld\n"
-                        "Read bytes               : %ld\n"
-                        "Write ops.               : %ld\n"
-                        "Written bytes            : %ld\n"
-                        "Ioctl ops.               : %ld\n"
-                        "Lseek ops.               : %ld\n"
-                        "Proc fs reads            : %ld\n",
-                        dev->stats.opens,
-                        dev->stats.releases,
-                        dev->stats.polls,
-                        CIRCULAR_BUFFER_SIZE,
-                        0, 0, 0,
-                        dev->stats.reads,
-                        dev->stats.read_b,
-                        dev->stats.writes,
-                        dev->stats.write_b,
-                        dev->stats.ioctls,
-                        dev->stats.llseeks,
-                        dev->stats.procfsreads);
+	len += snprintf(&page[len], page_size - len,
+			"Open ops.		  : %ld\n"
+			"Release ops.		  : %ld\n"
+			"Poll ops.		  : %ld\n"
+			"Read buffer size	  : %d\n"
+			"Read buffer head	  : %d\n"
+			"Read buffer tail	  : %d\n"
+			"Read buffer overruns	  : %d\n"
+			"Read ops.		  : %ld\n"
+			"Read bytes		  : %ld\n"
+			"Write ops.		  : %ld\n"
+			"Written bytes		  : %ld\n"
+			"Ioctl ops.		  : %ld\n"
+			"Lseek ops.		  : %ld\n"
+			"Proc fs reads		  : %ld\n",
+			dev->stats.opens,
+			dev->stats.releases,
+			dev->stats.polls,
+			CIRCULAR_BUFFER_SIZE,
+			0, 0, 0,
+			dev->stats.reads,
+			dev->stats.read_b,
+			dev->stats.writes,
+			dev->stats.write_b,
+			dev->stats.ioctls,
+			dev->stats.llseeks,
+			dev->stats.procfsreads);
 
 #ifdef BIFROST_INTERRUPT_TRACE
-        bifrost_trace_interrupts();
+	bifrost_trace_interrupts();
 #endif
 
-        *eof = 1;
-        return len;
+	*eof = 1;
+	return len;
 }
 #endif
 
 void bifrost_dma_chan_start(void *data, u32 ch, u32 src, u32 dst, u32 len,
-                            u32 dir)
+			    u32 dir)
 {
-        struct bifrost_device *dev = data;
-        struct device_memory *mem = dev->regb_dma;
-        unsigned long flags;
+	struct bifrost_device *dev = data;
+	struct device_memory *mem = dev->regb_dma;
+	unsigned long flags;
 
-        spin_lock_irqsave(&mem->lock, flags);
+	spin_lock_irqsave(&mem->lock, flags);
 
-        mem->wr(mem->handle, VALHALLA_ADDR_DMA_CHAN, ch);
-        smp_wmb();
-        mem->wr(mem->handle, VALHALLA_ADDR_DMA_SRC_ADDR, src);
-        mem->wr(mem->handle, VALHALLA_ADDR_DMA_DEST_ADDR, dst);
-        mem->wr(mem->handle, VALHALLA_ADDR_DMA_DIR_UP_STRM, dir);
-        mem->wr(mem->handle, VALHALLA_ADDR_DMA_LEN_BYTES, len);
-        smp_wmb();
-        mem->wr(mem->handle, VALHALLA_ADDR_DMA_START, 1);
+	mem->wr(mem->handle, VALHALLA_ADDR_DMA_CHAN, ch);
+	smp_wmb();
+	mem->wr(mem->handle, VALHALLA_ADDR_DMA_SRC_ADDR, src);
+	mem->wr(mem->handle, VALHALLA_ADDR_DMA_DEST_ADDR, dst);
+	mem->wr(mem->handle, VALHALLA_ADDR_DMA_DIR_UP_STRM, dir);
+	mem->wr(mem->handle, VALHALLA_ADDR_DMA_LEN_BYTES, len);
+	smp_wmb();
+	mem->wr(mem->handle, VALHALLA_ADDR_DMA_START, 1);
 
-        spin_unlock_irqrestore(&mem->lock, flags);
+	spin_unlock_irqrestore(&mem->lock, flags);
 }
 
 /**
@@ -190,34 +190,34 @@ void bifrost_dma_chan_start(void *data, u32 ch, u32 src, u32 dst, u32 len,
  */
 int bifrost_pci_probe_post_init(struct pci_dev *pdev)
 {
-        int rc = 0, msi_irq;
+	int rc = 0, msi_irq;
 
-        INFO("\n");
+	INFO("\n");
 
-        msi_irq = pdev ? pdev->irq : SIM_MSI_IRQ;
-        rc = bifrost_attach_msis_to_irq(msi_irq, bdev);
-        if (rc < 0) {
-                ALERT("Failed to attch MSI vectors\n");
-                return rc;
-        }
+	msi_irq = pdev ? pdev->irq : SIM_MSI_IRQ;
+	rc = bifrost_attach_msis_to_irq(msi_irq, bdev);
+	if (rc < 0) {
+		ALERT("Failed to attch MSI vectors\n");
+		return rc;
+	}
 
-        rc = bifrost_dma_init(msi_irq, bdev);
-        if (rc < 0) {
-                ALERT("Failed to setup DMA\n");
-                goto err_dma;
-        }
+	rc = bifrost_dma_init(msi_irq, bdev);
+	if (rc < 0) {
+		ALERT("Failed to setup DMA\n");
+		goto err_dma;
+	}
 
-       if (platform_fvd() && bifrost_fvd_init(bdev) != 0)
-            goto err_alloc;
+	if (platform_fvd() && bifrost_fvd_init(bdev) != 0)
+		goto err_alloc;
 
 
-        return 0;
+	return 0;
 
-  err_alloc:
-        bifrost_dma_cleanup(bdev);
-  err_dma:
-        bifrost_detach_msis();
-        return -1;
+err_alloc:
+	bifrost_dma_cleanup(bdev);
+err_dma:
+	bifrost_detach_msis();
+	return -1;
 }
 
 #include <linux/mempool.h>
@@ -225,9 +225,9 @@ int bifrost_pci_probe_post_init(struct pci_dev *pdev)
 #include <linux/workqueue.h>
 
 struct bifrost_work {
-        struct work_struct work;
-        struct bifrost_device *dev;
-        struct bifrost_event event;
+	struct work_struct work;
+	struct bifrost_device *dev;
+	struct bifrost_event event;
 };
 
 static mempool_t *work_pool;
@@ -235,40 +235,40 @@ static struct workqueue_struct *work_queue;
 
 static void *mempool_alloc_work(gfp_t flags, void *pool_data)
 {
-        (void)pool_data;
-        return kmalloc(sizeof(struct bifrost_work), flags);
+	(void)pool_data;
+	return kmalloc(sizeof(struct bifrost_work), flags);
 }
 
 static void mempool_free_work(void *work, void *pool_data)
 {
-        (void)pool_data;
-        kfree(work);
+	(void)pool_data;
+	kfree(work);
 }
 
 static void work_create_event(struct work_struct *work)
 {
-        struct bifrost_work *w;
+	struct bifrost_work *w;
 
-        w = container_of(work, struct bifrost_work, work);
-        bifrost_create_event(w->dev, &w->event);
-        mempool_free(w, work_pool);
+	w = container_of(work, struct bifrost_work, work);
+	bifrost_create_event(w->dev, &w->event);
+	mempool_free(w, work_pool);
 }
 
 void bifrost_create_event_in_atomic(struct bifrost_device *dev,
-                                    struct bifrost_event *event)
+				    struct bifrost_event *event)
 {
-        struct bifrost_work *w;
+	struct bifrost_work *w;
 
-        w = mempool_alloc(work_pool, GFP_ATOMIC);
-        if (w == NULL) {
-                ALERT("dropped event type=%d", event->type);
-                return;
-        }
+	w = mempool_alloc(work_pool, GFP_ATOMIC);
+	if (w == NULL) {
+		ALERT("dropped event type=%d", event->type);
+		return;
+	}
 
-        INIT_WORK(&w->work, work_create_event);
-        w->dev = dev;
-        memcpy(&w->event, event, sizeof(*event));
-        queue_work(work_queue, &w->work);
+	INIT_WORK(&w->work, work_create_event);
+	w->dev = dev;
+	memcpy(&w->event, event, sizeof(*event));
+	queue_work(work_queue, &w->work);
 }
 
 /*
@@ -276,102 +276,100 @@ void bifrost_create_event_in_atomic(struct bifrost_device *dev,
  */
 static int __init bifrost_init(void)
 {
-        if ((bdev = kzalloc(sizeof(struct bifrost_device), GFP_KERNEL)) == NULL) {
-                ALERT("failed to allocate BIFROST_DEVICE\n");
-                return -ENOMEM;
-        }
+	if ((bdev = kzalloc(sizeof(struct bifrost_device), GFP_KERNEL)) == NULL) {
+		ALERT("failed to allocate BIFROST_DEVICE\n");
+		return -ENOMEM;
+	}
 
-        bdev->info.version.major = BIFROST_VERSION_MAJOR;
-        bdev->info.version.minor = BIFROST_VERSION_MINOR;
-        bdev->info.version.revision = BIFROST_VERSION_MICRO;
+	bdev->info.version.major = BIFROST_VERSION_MAJOR;
+	bdev->info.version.minor = BIFROST_VERSION_MINOR;
+	bdev->info.version.revision = BIFROST_VERSION_MICRO;
 
-        if (simulator > 0)
-                bdev->info.simulator = 1;
+	if (simulator > 0)
+		bdev->info.simulator = 1;
 
-        INFO("simulator interface %s\n",
-             bdev->info.simulator == 0 ? "disabled" : "enabled");
+	INFO("simulator interface %s\n",
+	     bdev->info.simulator == 0 ? "disabled" : "enabled");
 
-        if (membus > 0)
-                bdev->membus = 1;
+	if (membus > 0)
+		bdev->membus = 1;
 
-        INFO("FPGA interface %s\n",
-             bdev->membus == 0 ? "PCIe" : "memory bus");
+	INFO("FPGA interface %s\n",
+	     bdev->membus == 0 ? "PCIe" : "memory bus");
 
-        INIT_LIST_HEAD(&bdev->list);
-        spin_lock_init(&bdev->lock_list);
+	INIT_LIST_HEAD(&bdev->list);
+	spin_lock_init(&bdev->lock_list);
 
-        work_pool = mempool_create(20, mempool_alloc_work, mempool_free_work,
-                                   NULL);
-        if (work_pool == NULL)
-                return -ENOMEM;
+	work_pool = mempool_create(20, mempool_alloc_work, mempool_free_work,
+				   NULL);
+	if (work_pool == NULL)
+		return -ENOMEM;
 
-        work_queue = create_singlethread_workqueue("bifrost");
-        if (work_queue == NULL) {
-                mempool_destroy(work_pool);
-                return -ENOMEM;
-        }
+	work_queue = create_singlethread_workqueue("bifrost");
+	if (work_queue == NULL) {
+		mempool_destroy(work_pool);
+		return -ENOMEM;
+	}
 
-        /*
-         * Setup /proc file system entry. Create an read-only entry in
-         * proc root with a file name same as the device (use NULL as
-         * parent dir)
-         */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	/*
+	 * Setup /proc file system entry. Create an read-only entry in
+	 * proc root with a file name same as the device (use NULL as
+	 * parent dir)
+	 */
+#if KERNEL_VERSION(3, 10, 0) <= LINUX_VERSION_CODE
 	/* No proc entry */
 #else
-        bdev->proc = create_proc_read_entry(BIFROST_DEVICE_NAME, 0, NULL,
-                                                  bifrost_procfs_read,
-                                                  bdev);
+	bdev->proc = create_proc_read_entry(BIFROST_DEVICE_NAME, 0, NULL,
+					    bifrost_procfs_read,
+					    bdev);
 
-        if (bdev->proc == NULL) {
-                ALERT("failed to add proc fs entry\n");
-                goto err_proc;
-        }
+	if (bdev->proc == NULL) {
+		ALERT("failed to add proc fs entry\n");
+		goto err_proc;
+	}
 #endif
 
-        if (bdev->info.simulator) {
-                if (bifrost_sim_pci_init(bdev) < 0)
-                        goto err_pci;
+	if (bdev->info.simulator) {
+		if (bifrost_sim_pci_init(bdev) < 0)
+			goto err_pci;
 
-                /* Continue to initialize driver without real PCI support */
-                if (bifrost_pci_probe_post_init(NULL) != 0) {
-                    bifrost_sim_pci_exit(bdev);
-                    goto err_pci;
-                }
+		/* Continue to initialize driver without real PCI support */
+		if (bifrost_pci_probe_post_init(NULL) != 0) {
+			bifrost_sim_pci_exit(bdev);
+			goto err_pci;
+		}
 
-        } else if (bdev->membus) {
+	} else if (bdev->membus) {
+		/* Simulator interface disabled, register as real Membus driver */
+		if (bifrost_membus_init(bdev) != 0) {
+			bifrost_membus_exit(bdev);
+			goto err_pci;
+		}
+	} else {
 
-                /* Simulator interface disabled, register as real Membus driver */
-                if (bifrost_membus_init(bdev) != 0)
-                {
-                    bifrost_membus_exit(bdev);
-                    goto err_pci;
-                }
-        } else {
+		/* Simulator interface disabled, register as real PCI driver */
+		if (bifrost_pci_init(bdev) != 0)
+			goto err_pci;
+	}
+	if (bifrost_cdev_init(bdev))
+		goto err_pci;
 
-                /* Simulator interface disabled, register as real PCI driver */
-                if (bifrost_pci_init(bdev) != 0)
-                    goto err_pci;
-        }
-        if (bifrost_cdev_init(bdev))
-            goto err_pci;
+	INFO("init done\n");
+	return 0;
 
-        INFO("init done\n");
-        return 0;
-
-  err_pci:
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+err_pci:
+#if KERNEL_VERSION(3, 10, 0) <= LINUX_VERSION_CODE
 	/* No proc entry */
 #else
-        remove_proc_entry(BIFROST_DEVICE_NAME, NULL);
-  err_proc:
+	remove_proc_entry(BIFROST_DEVICE_NAME, NULL);
+err_proc:
 #endif
-        flush_workqueue(work_queue);
-        destroy_workqueue(work_queue);
-        mempool_destroy(work_pool);
-        kfree(bdev);
-        ALERT("init failed\n");
-        return -1;
+	flush_workqueue(work_queue);
+	destroy_workqueue(work_queue);
+	mempool_destroy(work_pool);
+	kfree(bdev);
+	ALERT("init failed\n");
+	return -1;
 }
 
 /**
@@ -379,26 +377,25 @@ static int __init bifrost_init(void)
  */
 static void __exit bifrost_exit(void)
 {
-        INFO("exit\n");
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,10,0)
+	INFO("exit\n");
+#if KERNEL_VERSION(3, 10, 0) <= LINUX_VERSION_CODE
 #else
-        remove_proc_entry(BIFROST_DEVICE_NAME, NULL);
+	remove_proc_entry(BIFROST_DEVICE_NAME, NULL);
 #endif
-        bifrost_cdev_exit(bdev);
-        bifrost_dma_cleanup(bdev);
+	bifrost_cdev_exit(bdev);
+	bifrost_dma_cleanup(bdev);
 
-        if (bdev->info.simulator) {
-            bifrost_sim_pci_exit(bdev);
-        } else if (bdev->membus) {
-            bifrost_membus_exit(bdev);
-        } else {
-            bifrost_pci_exit(bdev);
-        }
+	if (bdev->info.simulator)
+		bifrost_sim_pci_exit(bdev);
+	else if (bdev->membus)
+		bifrost_membus_exit(bdev);
+	else
+		bifrost_pci_exit(bdev);
 
-        flush_workqueue(work_queue);
-        destroy_workqueue(work_queue);
-        mempool_destroy(work_pool);
-        kfree(bdev);
+	flush_workqueue(work_queue);
+	destroy_workqueue(work_queue);
+	mempool_destroy(work_pool);
+	kfree(bdev);
 }
 
 /*
