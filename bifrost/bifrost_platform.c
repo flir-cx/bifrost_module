@@ -48,6 +48,11 @@ bool platform_fvd(void)
 	return platform_rocky() || platform_evander();
 }
 
+bool platform_eoco(void)
+{
+	return false;
+}
+
 #else
 bool platform_rocky(void)
 {

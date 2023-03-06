@@ -10,8 +10,6 @@
 extern bool platform_fvd(void);
 extern bool platform_evander(void);
 extern bool platform_rocky(void);
-#if KERNEL_VERSION(5, 4, 0) <= LINUX_VERSION_CODE
 extern bool platform_eoco(void);
-#endif
 
 #endif
