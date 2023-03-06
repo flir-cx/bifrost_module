@@ -2,8 +2,8 @@
 /*
  * Copyright (c) FLIR Systems AB.
  *
- *  Created on: Mar 1, 2010
- *	Author: Jonas Romfelt <jonas.romfelt@flir.se>
+ * Created on: Mar 1, 2010
+ * Author: Jonas Romfelt <jonas.romfelt@flir.se>
  *
  * Public Bifrost driver interface
  *
@@ -25,7 +25,7 @@
 #define BIFROST_IOC_MAGIC 'B'
 
 #ifndef LINUX_VERSION_CODE
-ALERT("LINUX_VERSION_CODE undefined\n");
+BUG("LINUX_VERSION_CODE undefined\n");
 #endif
 
 struct bifrost_info {
@@ -52,8 +52,9 @@ struct bifrost_access {
 struct bifrost_access_range {
 	__u32 bar;    /* BAR number */
 	__u32 offset; /* Register offset (within a BAR) */
-	unsigned long values; /* User pointer to memory that can hold at least
-			       * `count' number of u32:s to read/write
+	unsigned long values; /*
+			       * User pointer to memory that can hold at least
+			       * 'count' number of u32:s to read/write
 			       */
 	__u32 count;  /* Number of registers to access */
 };
@@ -78,8 +79,7 @@ struct bifrost_dma_transfer {
 	__u32 device; /* Device (e.g. FPGA) memory offset. */
 	__u32 size;   /* Size of transfer in bytes. */
 };
-#define BIFROST_DMA_USER_BUFFER	      (1<<0)   //buffer is allocated in user space, physical Non-Contiguous
-
+#define BIFROST_DMA_USER_BUFFER	      (1 << 0) /* buffer is allocated in user space, physical Non-Contiguous */
 
 #define BIFROST_EVENT_TYPE_IRQ	      (1 << 0)
 #define BIFROST_EVENT_TYPE_WRITE_REGB (1 << 1)
@@ -92,20 +92,20 @@ struct bifrost_dma {
 	__u64 cookie;
 };
 
-/*
- * Used in bifrost_membus.c
- * This struct is returned when FPGA has JPEGLS Frame to deliver
- * irq_source = 4
- */
-
 #ifndef __KERNEL__
 #if KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE
 #include <linux/time_types.h>
 #endif
 #endif
 
+/*
+ * Used in bifrost_membus.c
+ * This struct is returned when FPGA has JPEGLS Frame to deliver
+ * irq_source = 4
+ */
 struct bifrost_membus_frame {
-	__u32 irq_source;      /* irq_source, note this is needed so we match
+	__u32 irq_source;      /*
+				* irq_source, note this is needed so we match
 				* the event struct.
 				*/
 	__u32 frameNo;	       /* Buffer number where we can find the frame. */
@@ -135,8 +135,9 @@ struct bifrost_membus_frame {
  *     1: cable connected (link is up).
  */
 struct bifrost_membus_irqstatus {
-	__u32 irq_source;    /* irq_source, note this is needed so we match the
-			      *	event struct.
+	__u32 irq_source;    /*
+			      * irq_source, note this is needed so we match the
+			      * event struct.
 			      */
 	__u32 value;	     /* FPGA irq status */
 };
