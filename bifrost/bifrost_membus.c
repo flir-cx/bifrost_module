@@ -423,7 +423,7 @@ static irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 		{
 			struct timespec64 ts64;
 
-			ktime_get_ts64(&ts64);
+			ktime_get_real_ts64(&ts64);
 			event.data.frame.time.tv_sec = (__kernel_old_time_t) ts64.tv_sec;
 			event.data.frame.time.tv_nsec = (long) ts64.tv_nsec;
 		}
@@ -537,7 +537,7 @@ static irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
 	{
 		struct timespec64 ts64;
 
-		ktime_get_ts64(&ts64);
+		ktime_get_real_ts64(&ts64);
 		event.data.frame.time.tv_sec = (__kernel_old_time_t) ts64.tv_sec;
 		event.data.frame.time.tv_nsec = (long) ts64.tv_nsec;
 	}
