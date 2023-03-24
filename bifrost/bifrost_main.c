@@ -276,7 +276,10 @@ void bifrost_create_event_in_atomic(struct bifrost_device *dev,
  */
 static int __init bifrost_init(void)
 {
-	if ((bdev = kzalloc(sizeof(struct bifrost_device), GFP_KERNEL)) == NULL) {
+	int ret;
+
+	bdev = kzalloc(sizeof(struct bifrost_device), GFP_KERNEL);
+	if (bdev == NULL) {
 		ALERT("failed to allocate BIFROST_DEVICE\n");
 		return -ENOMEM;
 	}
@@ -300,32 +303,29 @@ static int __init bifrost_init(void)
 	INIT_LIST_HEAD(&bdev->list);
 	spin_lock_init(&bdev->lock_list);
 
-	work_pool = mempool_create(20, mempool_alloc_work, mempool_free_work,
-				   NULL);
-	if (work_pool == NULL)
-		return -ENOMEM;
+	work_pool = mempool_create(20, mempool_alloc_work, mempool_free_work, NULL);
+	if (work_pool == NULL) {
+		ret = -ENOMEM;
+		goto err_alloc_pool;
+	}
 
 	work_queue = create_singlethread_workqueue("bifrost");
 	if (work_queue == NULL) {
-		mempool_destroy(work_pool);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err_alloc_queue;
 	}
 
+#if KERNEL_VERSION(3, 10, 0) > LINUX_VERSION_CODE
 	/*
-	 * Setup /proc file system entry. Create an read-only entry in
+	 * Setup /proc file system entry. Create a read-only entry in
 	 * proc root with a file name same as the device (use NULL as
 	 * parent dir)
 	 */
-#if KERNEL_VERSION(3, 10, 0) <= LINUX_VERSION_CODE
-	/* No proc entry */
-#else
 	bdev->proc = create_proc_read_entry(BIFROST_DEVICE_NAME, 0, NULL,
-					    bifrost_procfs_read,
-					    bdev);
-
+					    bifrost_procfs_read, bdev);
 	if (bdev->proc == NULL) {
 		ALERT("failed to add proc fs entry\n");
-		goto err_proc;
+		goto err_alloc_queue;
 	}
 #endif
 
@@ -358,18 +358,18 @@ static int __init bifrost_init(void)
 	return 0;
 
 err_pci:
-#if KERNEL_VERSION(3, 10, 0) <= LINUX_VERSION_CODE
-	/* No proc entry */
-#else
+#if KERNEL_VERSION(3, 10, 0) > LINUX_VERSION_CODE
 	remove_proc_entry(BIFROST_DEVICE_NAME, NULL);
-err_proc:
 #endif
 	flush_workqueue(work_queue);
 	destroy_workqueue(work_queue);
+err_alloc_queue:
 	mempool_destroy(work_pool);
+err_alloc_pool:
 	kfree(bdev);
+
 	ALERT("init failed\n");
-	return -1;
+	return ret;
 }
 
 /**
@@ -378,8 +378,7 @@ err_proc:
 static void __exit bifrost_exit(void)
 {
 	INFO("exit\n");
-#if KERNEL_VERSION(3, 10, 0) <= LINUX_VERSION_CODE
-#else
+#if KERNEL_VERSION(3, 10, 0) > LINUX_VERSION_CODE
 	remove_proc_entry(BIFROST_DEVICE_NAME, NULL);
 #endif
 	bifrost_cdev_exit(bdev);
