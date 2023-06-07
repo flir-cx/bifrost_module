@@ -339,6 +339,9 @@ static int __init bifrost_init(void)
 			goto err_pci;
 		}
 
+		if (bifrost_cdev_init(bdev))
+			goto err_pci;
+
 	} else if (bdev->membus) {
 		/* Simulator interface disabled, register as real Membus driver */
 		if (bifrost_membus_init(bdev) != 0) {
@@ -350,9 +353,10 @@ static int __init bifrost_init(void)
 		/* Simulator interface disabled, register as real PCI driver */
 		if (bifrost_pci_init(bdev) != 0)
 			goto err_pci;
+
+		if (bifrost_cdev_init(bdev))
+			goto err_pci;
 	}
-	if (bifrost_cdev_init(bdev))
-		goto err_pci;
 
 	INFO("init done\n");
 	return 0;
