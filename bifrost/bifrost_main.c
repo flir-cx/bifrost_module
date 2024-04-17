@@ -26,8 +26,8 @@
 #include <linux/uaccess.h>
 #include <linux/atomic.h>
 #else
-#include <asm/uaccess.h>
-#include <asm/atomic.h>
+#include <linux/uaccess.h>
+#include <linux/atomic.h>
 #endif
 
 #include <asm/byteorder.h>
@@ -60,8 +60,7 @@ static int device_mem_info(struct bifrost_device *dev, char *buf, size_t bufsz)
 		if (mem->enabled)
 			n = snprintf(buf + len,
 				     bufsz - len,
-				     "BAR%d: bus-addr=%08lx cpu-addr=%p "
-				     "size=%lu KByte\n",
+				     "BAR%d: bus-addr=%08lx cpu-addr=%p size=%lu KByte\n",
 				     bar,
 				     mem->addr_bus,
 				     mem->addr,
@@ -83,7 +82,7 @@ static int device_mem_info(struct bifrost_device *dev, char *buf, size_t bufsz)
  *
  * @param page Where to start write data
  * @param start Where in page
- * @param offset Offset in page that read is done
+ * @param offset in page that read is done
  * @param page_size Size of page (bytes)
  * @param eof Set to 1 to signal EOF
  * @return 0 to indicate that there is no more data to read.
@@ -109,7 +108,6 @@ static int bifrost_procfs_read(char *page, char **start, off_t offset,
 	len = snprintf(page, page_size,
 		       "Device name		 : %s\n"
 		       "Driver version		 : %d.%d.%d%s\n"
-		       "Build timestamp		 : "__DATE__" "__TIME__"\n"
 		       "Mode			 : %s\n"
 		       "Interface		 : %s\n",
 		       BIFROST_DEVICE_NAME,
