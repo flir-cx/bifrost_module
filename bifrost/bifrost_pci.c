@@ -226,20 +226,6 @@ static const struct attribute_group bifrost_groups = {
 };
 #endif
 
-int bifrost_simulate_msi(unsigned int msi_vec)
-{
-	struct msi_action *m;
-
-	if (msi_vec >= msi_interrupts)
-		return -EINVAL; /* Too big MSI vector */
-
-	m = &msi[msi_vec];
-	if (m->handler == NULL)
-		return -EINVAL; /* MSI vector not setup */
-
-	return m->handler(m->irq, m);
-}
-
 static int request_msi(struct msi_action *m, int hw_irq, int vec, void *data)
 {
 	/*
@@ -248,9 +234,6 @@ static int request_msi(struct msi_action *m, int hw_irq, int vec, void *data)
 	m->msi_vec = vec;
 	m->irq = hw_irq + vec;
 	m->data = data;
-
-	if (bdev->info.simulator)
-		return 0;
 
 	return request_irq(m->irq, m->handler, m->flags, m->name, m);
 }
@@ -286,8 +269,7 @@ void bifrost_detach_msis(void)
 
 	for (n = 0; n < ARRAY_SIZE(msi); n++) {
 		if (msi[n].irq != NO_IRQ) {
-			if (!bdev->info.simulator)
-				free_irq(msi[n].irq, &msi[n]);
+			free_irq(msi[n].irq, &msi[n]);
 			msi[n].irq = NO_IRQ;
 		}
 	}
@@ -296,32 +278,27 @@ void bifrost_detach_msis(void)
 int bifrost_dma_init(int irq, struct bifrost_device *dev)
 {
 	int n, num_ch, idle_map;
+	struct device_memory *mem;
+	u32 val;
 
-	if (dev->info.simulator) {
-		num_ch = 1;
-		idle_map = 1;
+	if (platform_rocky()) {
+		INFO("Rocky platform, Selecting bar 3\n");
+		dev->regb_dma = &dev->regb[3];
+	} else if (platform_evander() || platform_eoco()) {
+		INFO("Evander/Eoco platform, Selecting bar 2\n");
+		dev->regb_dma = &dev->regb[2];
 	} else {
-		struct device_memory *mem;
-		u32 val;
-
-		if (platform_rocky()) {
-			INFO("Rocky platform, Selecting bar 3\n");
-			dev->regb_dma = &dev->regb[3];
-		} else if (platform_evander() || platform_eoco()) {
-			INFO("Evander/Eoco platform, Selecting bar 2\n");
-			dev->regb_dma = &dev->regb[2];
-		} else {
-			INFO("Unknown platform, Selecting bar 0\n");
-			dev->regb_dma = &dev->regb[0];
-		}
-		mem = dev->regb_dma;
-
-		mem->rd(mem->handle, VALHALLA_ADDR_DMA_CAPABILITY, &val);
-		num_ch = val & 0xf;
-
-		mem->rd(mem->handle, VALHALLA_ADDR_DMA_STATUS, &val);
-		idle_map = ~val & ((1 << num_ch) - 1);
+		INFO("Unknown platform, Selecting bar 0\n");
+		dev->regb_dma = &dev->regb[0];
 	}
+	mem = dev->regb_dma;
+
+	mem->rd(mem->handle, VALHALLA_ADDR_DMA_CAPABILITY, &val);
+	num_ch = val & 0xf;
+
+	mem->rd(mem->handle, VALHALLA_ADDR_DMA_STATUS, &val);
+	idle_map = ~val & ((1 << num_ch) - 1);
+
 	dev->dma_ctl = alloc_dma_ctl(num_ch, idle_map, bifrost_dma_chan_start,
 				     dev);
 	if (dev->dma_ctl == NULL)
@@ -339,12 +316,11 @@ int bifrost_dma_init(int irq, struct bifrost_device *dev)
 
 void bifrost_dma_cleanup(struct bifrost_device *dev)
 {
-	int n, num_ch;
+	int n;
+	int num_ch=8;
 
 	if (dev->dma_ctl == NULL)
 		return;
-
-	num_ch = (dev->info.simulator) ? 1 : 8;
 
 	for (n = 0; n < num_ch; n++)
 		disable_dma_ch(dev->dma_ctl, n);

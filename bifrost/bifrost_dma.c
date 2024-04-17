@@ -277,31 +277,3 @@ int get_dma_info(struct dma_ctl *ctl, char *buf, size_t bufsz)
 			ctl->num_ch, ctl->idle_bitmap);
 }
 
-/*
- * Special function to "reset" the DMA controller when we are
- * running in simulator mode.
- */
-void reset_dma_sim(struct dma_ctl *ctl)
-{
-	unsigned long flags;
-	struct list_head *pos, *tmp;
-	struct dma_req *req;
-	int n;
-
-	if (ctl == NULL)
-		return;
-
-	spin_lock_irqsave(&ctl->lock, flags);
-	for (n = 0; n < ARRAY_SIZE(ctl->ch); n++) {
-		kfree(ctl->ch[n].in_progress);
-		ctl->ch[n].in_progress = NULL;
-	}
-	ctl->idle_bitmap = (1 << ctl->num_ch) - 1;
-
-	list_for_each_safe(pos, tmp, &ctl->list) {
-		req = list_entry(pos, struct dma_req, node);
-		list_del(&req->node);
-		kfree(req);
-	}
-	spin_unlock_irqrestore(&ctl->lock, flags);
-}

@@ -34,7 +34,6 @@ struct bifrost_info {
 		__u8 minor;
 		__u8 revision;
 	} version;
-	__u8 simulator; /* Set to 0 if simulator interface disabled */
 
 	/*
 	 * TODO:
@@ -71,9 +70,7 @@ struct bifrost_dma_transfer {
 	/*
 	 * System (CPU) memory address.
 	 *
-	 * IMPORTANT! In simulator mode the system address should be
-	 * an address in kernel virtual memory, otherwise it is expected to
-	 * be a physical address in DMA'able memory.
+	 * address is expected to be a physical address in DMA'able memory.
 	 */
 	unsigned long system;
 	__u32 device; /* Device (e.g. FPGA) memory offset. */
@@ -171,20 +168,6 @@ struct bifrost_event {
 	} timestamp;
 };
 
-struct bifrost_simulator_memory {
-	unsigned long address; /* User space address to malloc'd memory. */
-	__u32 size;	       /* Size of memory in bytes. */
-};
-
-struct bifrost_simulator_memory_transfer {
-	unsigned long system;	 /* Kernel virtual address */
-	unsigned long simulator; /* User space address to malloc'd memory. */
-	int to;			 /* If to is set data is copied TO simulator
-				  * FROM system, i.e. down stream.
-				  */
-	__u32 size;		 /* Size of transfer in bytes. */
-};
-
 /*
  * Bifrost ioctls
  */
@@ -256,28 +239,6 @@ struct bifrost_simulator_memory_transfer {
 /* Dequeue and read event from event-queue */
 #define BIFROST_IOCTL_DEQUEUE_EVENT				\
 	_IOR(BIFROST_IOC_MAGIC, 22, struct bifrost_event)
-
-/*
- * Bifrost Simulator
- */
-
-/*
- * Setup simulated memory, client should supply size of the allocated
- * memory
- */
-#define BIFROST_IOCTL_SETUP_SIMULATOR_MEMORY				\
-	_IOW(BIFROST_IOC_MAGIC, 50, struct bifrost_simulator_memory)
-
-/*
- * Simulate a DMA transfer, i.e. copy data to/from simulated device
- * memory and system DMA'able buffer
- */
-#define BIFROST_IOCTL_SIMULATE_DMA_TRANSFER				\
-	_IOW(BIFROST_IOC_MAGIC, 51, struct bifrost_simulator_memory_transfer)
-
-/* Simulate IRQ, only available when driver loaded with test enabled */
-#define BIFROST_IOCTL_SIMULATE_IRQ		\
-	_IOW(BIFROST_IOC_MAGIC, 52, __u32)
 
 /*
  * By default, all registers are read/writable and does not trigger

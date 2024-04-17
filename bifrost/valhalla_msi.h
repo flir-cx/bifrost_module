@@ -34,12 +34,6 @@
 #ifndef VALHALLA_MSI_H_
 #define VALHALLA_MSI_H_
 
-
- /*
-  * FIXME move to heimsim file, not a real MSI IRQ, only used by HEIMSIM 
-  */
-//#define VALHALLA_MSI_VIDEO_FRAME_SYNC (1 << 9)
-
 #ifdef __KERNEL__
 #include <linux/bitops.h>
 #include <linux/errno.h>

@@ -173,18 +173,6 @@ static int bifrost_release(struct inode *inode, struct file *file)
 	}
 	spin_unlock(&hnd->event_list_lock);
 
-	/*
-	 * TODO move to simulator
-	 *
-	 * De-register simulator memory if it was this handle that was the
-	 * responsible
-	 */
-	if (dev->simulator.ram.hnd == hnd) {
-		dev->simulator.ram.hnd = NULL;
-		dev->simulator.ram.size = 0;
-		dev->simulator.ram.address = 0;
-	}
-
 	kfree(hnd);
 	return 0;
 }
@@ -494,15 +482,6 @@ static int check_bar_access(struct bifrost_device *dev, int bar, int access,
 		0, /* BAR4 */
 		0, /* BAR5 */
 	};
-	/* In simulator mode, user-space has full access to the BARs */
-	const static int sim_user_space_bar_access[6] = {
-		RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR0 */
-		RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR1 */
-		RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR2 */
-		RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR3 */
-		RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR4 */
-		RD_ACCESS | WR_ACCESS | EV_ACCESS, /* BAR5 */
-	};
 	int v, mask;
 
 	if (bar >= ARRAY_SIZE(user_space_bar_access)) {
@@ -513,9 +492,7 @@ static int check_bar_access(struct bifrost_device *dev, int bar, int access,
 		v = -EFAULT; /* BAR is not mapped into memory */
 		goto e_exit;
 	}
-	if (dev->info.simulator)
-		mask = (access & sim_user_space_bar_access[bar]);
-	else if (platform_fvd())
+	if (platform_fvd())
 		mask = (access & user_space_bar_access_fvd[bar]);
 	else if (dev->membus)
 		mask = (access & user_space_membus_access[bar]);
@@ -839,86 +816,6 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
 		break;
 	}
 
-	case BIFROST_IOCTL_SIMULATE_IRQ:
-	{
-		u32 source;
-		int msi;
-
-		/* Sending fake IRQs are not allowed if not in simulator mode */
-		if (dev->info.simulator == 0) {
-			INFO("not in simulator mode");
-			return -EINVAL;
-		}
-		if (get_user(source, (u32 __user *)arg))
-			return -EFAULT;
-		msi = map_event_to_msi(source);
-		if (msi < 0)
-			return -EINVAL;
-		if (bifrost_simulate_msi(msi) < 0) {
-			INFO("failed to simulate MSI%d\n", msi);
-			return -EINVAL;
-		}
-		INFO("BIFROST_IOCTL_SIMULATE_IRQ 0x%08x\n", source);
-		break;
-	}
-
-	case BIFROST_IOCTL_SETUP_SIMULATOR_MEMORY:
-	{
-		struct bifrost_simulator_memory memory;
-
-		if (dev->info.simulator == 0) {
-			INFO("not in simulator mode");
-			return -EINVAL;
-		}
-		if (copy_from_user(&memory, uarg, sizeof(memory)))
-			return -ENOMEM;
-		INFO("BIFROST_IOCTL_SETUP_SIMULATOR_MEMORY addr=%08lX, size=%d\n",
-		     memory.address, memory.size);
-		dev->simulator.ram.hnd = hnd;
-		dev->simulator.ram.size = memory.size;
-		dev->simulator.ram.address = memory.address;
-		break;
-	}
-
-	case BIFROST_IOCTL_SIMULATE_DMA_TRANSFER:
-	{
-		struct bifrost_simulator_memory_transfer transfer;
-
-		if (copy_from_user(&transfer, uarg, sizeof(transfer)))
-			return -ENOMEM;
-
-		INFO("BIFROST_IOCTL_SIMULATE_DMA_TRANSFER_%s sys=0x%08lX, sim=0x%08lX, len=%d\n",
-		     transfer.to ? "DOWN" : "UP",
-		     transfer.system, transfer.simulator, transfer.size);
-
-		if (dev->simulator.ram.hnd != hnd) {
-			INFO("this handle is not responsible for the simulator memory\n");
-			return -EINVAL;
-		}
-
-		if (transfer.simulator < dev->simulator.ram.address ||
-		    (transfer.simulator + transfer.size) >
-		    (dev->simulator.ram.address + dev->simulator.ram.size)) {
-			INFO("risk for out of bounds memory copy\n");
-			return -EFAULT;
-		}
-
-		if (transfer.to) {
-			/* To FPGA-simulator from system memory: to user */
-			if (copy_to_user((void __user *)transfer.simulator,
-					(void *)transfer.system,
-					 transfer.size) != 0)
-				return -EFAULT;
-		} else {
-			/* To system memory from FPGA-simulator: from user */
-			if (copy_from_user((void *)transfer.system,
-					   (void __user *)transfer.simulator,
-					   transfer.size) != 0)
-				return -EFAULT;
-		}
-		break;
-	}
-
 	case BIFROST_IOCTL_SET_REGB_MODE:
 	{
 		struct bifrost_access a;
@@ -941,10 +838,6 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
 	case BIFROST_IOCTL_RESET_DMA:
 	{
 		/* This is a NOP when running on target! */
-		if (dev->info.simulator) {
-			INFO("BIFROST_IOCTL_RESET_DMA\n");
-			reset_dma_sim(dev->dma_ctl);
-		}
 		break;
 	}
 

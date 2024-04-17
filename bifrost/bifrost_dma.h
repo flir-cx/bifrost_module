@@ -59,5 +59,4 @@ extern int start_dma_xfer(struct dma_ctl *ctl, struct dma_req *req);
 extern void *dma_done(struct dma_ctl *ctl, int irq, unsigned int *ticket,
 		      s64 *time, struct bifrost_device *dev);
 
-extern void reset_dma_sim(struct dma_ctl *ctl);
 #endif

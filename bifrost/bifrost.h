@@ -25,7 +25,6 @@
 
 #include "bifrost_api.h"
 #include "bifrost_dma.h"
-#include "bifrost_sim.h"
 #include <linux/slab.h>
 /*
  * Define driver information (displayed using modinfo)
@@ -152,9 +151,6 @@ struct bifrost_device {
 	struct device_memory *regb_dma; /* BAR used for DMA registers*/
 	struct device_memory ddr;       /* FPGA DDR memory */
 
-	/* TODO add segments instead */
-	struct bifrost_simulator simulator;
-
 	struct dma_ctl *dma_ctl;
 
 	/* Membus addons */
@@ -204,7 +200,6 @@ void bifrost_create_event_in_atomic(struct bifrost_device *dev,
 
 int bifrost_attach_msis_to_irq(int hw_irq, struct bifrost_device *dev);
 void bifrost_detach_msis(void);
-int bifrost_simulate_msi(unsigned int msi);
 int bifrost_dma_init(int hw_irq, struct bifrost_device *dev);
 void bifrost_dma_cleanup(struct bifrost_device *dev);
 

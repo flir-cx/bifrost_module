@@ -37,10 +37,6 @@ struct bifrost_device *bdev;
  * Module parameters
  */
 
-static u32 simulator;
-module_param(simulator, uint, 0400);
-MODULE_PARM_DESC(simulator, "Enable simulator interface");
-
 static u32 membus;
 module_param(membus, uint, 0400);
 MODULE_PARM_DESC(membus, "Enable memory bus interface to FPGA (instead of PCI)");
@@ -80,7 +76,7 @@ int bifrost_pci_probe_post_init(struct pci_dev *pdev)
 
 	INFO("\n");
 
-	msi_irq = pdev ? pdev->irq : SIM_MSI_IRQ;
+	msi_irq = pdev->irq;
 	rc = bifrost_attach_msis_to_irq(msi_irq, bdev);
 	if (rc < 0) {
 		ALERT("Failed to attch MSI vectors\n");
@@ -174,12 +170,6 @@ static int __init bifrost_init(void)
 	bdev->info.version.minor = BIFROST_VERSION_MINOR;
 	bdev->info.version.revision = BIFROST_VERSION_MICRO;
 
-	if (simulator > 0)
-		bdev->info.simulator = 1;
-
-	INFO("simulator interface %s\n",
-	     bdev->info.simulator == 0 ? "disabled" : "enabled");
-
 	if (membus > 0)
 		bdev->membus = 1;
 
@@ -201,28 +191,15 @@ static int __init bifrost_init(void)
 		goto err_alloc_queue;
 	}
 
-	if (bdev->info.simulator) {
-		if (bifrost_sim_pci_init(bdev) < 0)
-			goto err_pci;
-
-		/* Continue to initialize driver without real PCI support */
-		if (bifrost_pci_probe_post_init(NULL) != 0) {
-			bifrost_sim_pci_exit(bdev);
-			goto err_pci;
-		}
-
-		if (bifrost_cdev_init(bdev))
-			goto err_pci;
-
-	} else if (bdev->membus) {
-		/* Simulator interface disabled, register as real Membus driver */
+	if (bdev->membus) {
+		/* register as real Membus driver */
 		if (bifrost_membus_init(bdev) != 0) {
 			bifrost_membus_exit(bdev);
 			goto err_pci;
 		}
 	} else {
 
-		/* Simulator interface disabled, register as real PCI driver */
+		/* register as real PCI driver */
 		if (bifrost_pci_init(bdev) != 0)
 			goto err_pci;
 
@@ -254,9 +231,7 @@ static void __exit bifrost_exit(void)
 	bifrost_cdev_exit(bdev);
 	bifrost_dma_cleanup(bdev);
 
-	if (bdev->info.simulator)
-		bifrost_sim_pci_exit(bdev);
-	else if (bdev->membus)
+	if (bdev->membus)
 		bifrost_membus_exit(bdev);
 	else
 		bifrost_pci_exit(bdev);

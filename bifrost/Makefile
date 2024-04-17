@@ -7,7 +7,12 @@
 
 obj-m := bifrost.o
 
-bifrost-objs := bifrost_main.o bifrost_cdev.o bifrost_pci.o bifrost_sim.o bifrost_dma.o bifrost_membus.o bifrost_platform.o
+bifrost-objs := bifrost_main.o
+bifrost-objs += bifrost_cdev.o
+bifrost-objs += bifrost_pci.o
+bifrost-objs += bifrost_dma.o
+bifrost-objs += bifrost_membus.o
+bifrost-objs += bifrost_platform.o
 
 ccflags-y := -Wall -Wstrict-prototypes
 
