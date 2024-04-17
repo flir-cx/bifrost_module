@@ -611,6 +611,30 @@ static int do_write_regb(struct bifrost_device *dev, int bar,
 	return 0;
 }
 
+int bifrost_do_xfer(struct bifrost_device *dev, void __user *uarg, struct bifrost_user_handle *hnd, int flags, int dir)
+{
+	struct bifrost_dma_transfer xfer;
+	int rc;
+
+	if (copy_from_user(&xfer, uarg, sizeof(xfer)))
+		return -EFAULT;
+
+	/*
+	 * Note: the user handle is used as cookie for DMA done event
+	 * matching.
+	 */
+	if (dev->membus)
+		rc = do_membus_xfer(dev, &xfer, dir);
+	else
+		rc = do_dma_start_xfer(dev->dma_ctl, &xfer, dir, hnd, flags);
+	if (rc >= 0) {
+		INFO("BIFROST_DMA_TRANSFER_%s: sys=%08lx, dev=%08x, len=%d\n",
+		     dir == BIFROST_DMA_DIRECTION_DOWN ? "DOWN" : "UP",
+		     xfer.system, xfer.device, xfer.size);
+	}
+	return rc;
+}
+
 /**
  * Handler for file operation ioctl().
  *
@@ -740,38 +764,19 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
 	}
 
 	case BIFROST_IOCTL_START_DMA_UP_USER:
-	case BIFROST_IOCTL_START_DMA_DOWN_USER:
-	    flags =  BIFROST_DMA_USER_BUFFER;
-	    /* fall through */
-	case BIFROST_IOCTL_START_DMA_UP:
-	case BIFROST_IOCTL_START_DMA_DOWN:
-	{
-		struct bifrost_dma_transfer xfer;
-		int dir;
-
-		if (cmd == BIFROST_IOCTL_START_DMA_DOWN || cmd == BIFROST_IOCTL_START_DMA_DOWN_USER)
-			dir = BIFROST_DMA_DIRECTION_DOWN;
-		else
-			dir = BIFROST_DMA_DIRECTION_UP;
-
-		if (copy_from_user(&xfer, uarg, sizeof(xfer)))
-			return -EFAULT;
-
-		/*
-		 * Note: the user handle is used as cookie for DMA done event
-		 * matching.
-		 */
-		if (dev->membus)
-			rc = do_membus_xfer(dev, &xfer, dir);
-		else
-			rc = do_dma_start_xfer(dev->dma_ctl, &xfer, dir, hnd, flags);
-		if (rc >= 0) {
-			INFO("BIFROST_DMA_TRANSFER_%s: sys=%08lx, dev=%08x, len=%d\n",
-			     dir == BIFROST_DMA_DIRECTION_DOWN ? "DOWN" : "UP",
-			     xfer.system, xfer.device, xfer.size);
-		}
+		flags =  BIFROST_DMA_USER_BUFFER;
+		rc = bifrost_do_xfer(dev, uarg, hnd, flags, BIFROST_DMA_DIRECTION_UP);
 		break;
-	}
+	case BIFROST_IOCTL_START_DMA_DOWN_USER:
+		flags =  BIFROST_DMA_USER_BUFFER;
+		rc = bifrost_do_xfer(dev, uarg, hnd, flags, BIFROST_DMA_DIRECTION_DOWN);
+		break;
+	case BIFROST_IOCTL_START_DMA_UP:
+		rc = bifrost_do_xfer(dev, uarg, hnd, flags, BIFROST_DMA_DIRECTION_UP);
+		break;
+	case BIFROST_IOCTL_START_DMA_DOWN:
+		rc = bifrost_do_xfer(dev, uarg, hnd, flags, BIFROST_DMA_DIRECTION_UP);
+		break;
 
 	case BIFROST_IOCTL_ENABLE_EVENT:
 	{
