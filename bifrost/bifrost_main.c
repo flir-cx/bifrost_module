@@ -149,11 +149,6 @@ static int bifrost_procfs_read(char *page, char **start, off_t offset,
 			dev->stats.ioctls,
 			dev->stats.llseeks,
 			dev->stats.procfsreads);
-
-#ifdef BIFROST_INTERRUPT_TRACE
-	bifrost_trace_interrupts();
-#endif
-
 	*eof = 1;
 	return len;
 }
