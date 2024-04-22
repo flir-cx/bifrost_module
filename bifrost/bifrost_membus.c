@@ -45,27 +45,21 @@ static irqreturn_t FVDIRQ2Service(int irq, void *dev_id);
 
 
 // NOTE! - This function must perform 8-bytes (4 16 bit words) bursts to FPGA (bug in iMX6)
-static void fpgaread(u32 dst, void *src, u32 len)
+static void fpgaread(u32 dst_addr, void __iomem *src, u32 len)
 {
-	u64 *pDst = (u64 *)dst;
-	u64 *pSrc = (u64 *)src;
+	u16 *dst = (u16 *)dst_addr;
 
-	len >>= 3;
-
-	while (len--)
-		*pDst++ = *pSrc;
+	len >>= 1;
+	ioread16_rep(src, dst, len);
 }
 
 // NOTE! - This function must perform 8-bytes (4 16 bit words) bursts to FPGA (bug in iMX6)
-static void fpgawrite(void *dst, u32 src, u32 len)
+static void fpgawrite(void  __iomem *dst, u32 src_addr, u32 len)
 {
-	u64 *pDst = (u64 *)dst;
-	u64 *pSrc = (u64 *)src;
+	u16 *src = (u16 *)src_addr;
 
-	len >>= 3;
-
-	while (len--)
-		*pDst = *pSrc++;
+	len >>= 1;
+	iowrite16_rep(dst, src, len);
 }
 
 int membus_write_device_memory(void *handle, u32 offset, u32 value)

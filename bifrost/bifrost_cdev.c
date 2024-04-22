@@ -623,10 +623,32 @@ int bifrost_do_xfer(struct bifrost_device *dev, void __user *uarg, struct bifros
 	 * Note: the user handle is used as cookie for DMA done event
 	 * matching.
 	 */
-	if (dev->membus)
+	if (dev->membus) {
+		u8 *buf;
+		void __user *usr_mem = (void __user *)xfer.system;
+
+		buf = kcalloc(xfer.size, 1, GFP_KERNEL);
+		if (buf == NULL)
+			return -ENOMEM;
+		xfer.system = (unsigned long)buf;
+		if (dir == BIFROST_DMA_DIRECTION_DOWN) {
+			rc = copy_from_user(buf, usr_mem, xfer.size);
+			if (rc < 0)
+				goto membus_free;
+		}
 		rc = do_membus_xfer(dev, &xfer, dir);
-	else
+		if (rc)
+			goto membus_free;
+		if (dir == BIFROST_DMA_DIRECTION_UP) {
+			rc = copy_to_user(usr_mem, buf, xfer.size);
+			if (rc)
+				goto membus_free;
+		}
+membus_free:
+		kfree(buf);
+	} else {
 		rc = do_dma_start_xfer(dev->dma_ctl, &xfer, dir, hnd, flags);
+	}
 	if (rc >= 0) {
 		INFO("BIFROST_DMA_TRANSFER_%s: sys=%08lx, dev=%08x, len=%d\n",
 		     dir == BIFROST_DMA_DIRECTION_DOWN ? "DOWN" : "UP",
