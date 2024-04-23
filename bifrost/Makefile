@@ -1,20 +1,18 @@
-#
-# Makefile to build Bifrost driver for Linux using `kbuild' build system
-#
-# Control build by adding one or many to ccflags-y:
-#  -DBIFROST_DEBUG: for debug outputs using printk()
-#
-
 obj-m := bifrost.o
 
-bifrost-objs := bifrost_main.o
-bifrost-objs += bifrost_cdev.o
-bifrost-objs += bifrost_pci.o
-bifrost-objs += bifrost_dma.o
-bifrost-objs += bifrost_membus.o
-bifrost-objs += bifrost_platform.o
+bifrost-objs := bifrost_main.o bifrost_cdev.o bifrost_pci.o \
+		bifrost_dma.o bifrost_membus.o \
+		bifrost_platform.o
 
-ccflags-y := -Wall -Wstrict-prototypes
+SRC := $(shell pwd)
 
+all:
+	$(MAKE) -C $(KERNEL_SRC) M=$(SRC)
 
+modules_install:
+	$(MAKE) -C $(KERNEL_SRC) M=$(SRC) modules_install
 
+clean:
+	rm -f *.o *~ core .depend .*.cmd *.ko *.mod.c *.mod
+	rm -f Module.markers Module.symvers modules.order
+	rm -rf .tmp_versions Modules.symvers
