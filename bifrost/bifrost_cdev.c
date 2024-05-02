@@ -797,7 +797,7 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
 		rc = bifrost_do_xfer(dev, uarg, hnd, flags, BIFROST_DMA_DIRECTION_UP);
 		break;
 	case BIFROST_IOCTL_START_DMA_DOWN:
-		rc = bifrost_do_xfer(dev, uarg, hnd, flags, BIFROST_DMA_DIRECTION_UP);
+		rc = bifrost_do_xfer(dev, uarg, hnd, flags, BIFROST_DMA_DIRECTION_DOWN);
 		break;
 
 	case BIFROST_IOCTL_ENABLE_EVENT:
