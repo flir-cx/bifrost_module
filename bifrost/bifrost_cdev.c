@@ -555,13 +555,17 @@ e_exit:
 static int do_read_regb(struct bifrost_device *dev, int bar,
 			unsigned int offset, unsigned int *value)
 {
+	struct device_memory *mem;
 	int v;
 
 	v = check_bar_access(dev, bar, RD_ACCESS, offset);
 	if (v < 0)
 		return v;
 
-	v = dev->regb[bar].rd(dev->regb[bar].handle, offset, value);
+	mem = &dev->regb[bar];
+	spin_lock(&mem->lock);
+	v = mem->rd(mem->handle, offset, value);
+	spin_unlock(&mem->lock);
 	if (v < 0)
 		return v;
 
@@ -573,13 +577,17 @@ static int do_read_regb(struct bifrost_device *dev, int bar,
 static int do_write_regb(struct bifrost_device *dev, int bar,
 			 unsigned int offset, unsigned int value)
 {
+	struct device_memory *mem;
 	int v;
 
 	v = check_bar_access(dev, bar, WR_ACCESS, offset);
 	if (v < 0)
 		return v;
 
-	v = dev->regb[bar].wr(dev->regb[bar].handle, offset, value);
+	mem = &dev->regb[bar];
+	spin_lock(&mem->lock);
+	v = mem->wr(mem->handle, offset, value);
+	spin_unlock(&mem->lock);
 	if (v < 0)
 		return v;
 
@@ -603,17 +611,21 @@ int bifrost_do_xfer(struct bifrost_device *dev, void __user *uarg, struct bifros
 	if (dev->membus) {
 		u8 *buf;
 		void __user *usr_mem = (void __user *)xfer.system;
+		struct device_memory *mem = &dev->regb[0];
 
 		buf = kcalloc(xfer.size, 1, GFP_KERNEL);
 		if (buf == NULL)
 			return -ENOMEM;
+
 		xfer.system = (unsigned long)buf;
 		if (dir == BIFROST_DMA_DIRECTION_DOWN) {
 			rc = copy_from_user(buf, usr_mem, xfer.size);
 			if (rc < 0)
 				goto membus_free;
 		}
+		spin_lock(&mem->lock);
 		rc = do_membus_xfer(dev, &xfer, dir);
+		spin_unlock(&mem->lock);
 		if (rc)
 			goto membus_free;
 		if (dir == BIFROST_DMA_DIRECTION_UP) {
