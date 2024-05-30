@@ -35,6 +35,10 @@
 #endif
 
 #define FPGA_MEM_TIME	30    // Time in us from address write to memory access
+#define FPGA_WR_BIT         (0x8000)  // Write-enable bit for address-hi
+#define FPGA_RD_BIT         (0x0000)
+#define FPGA_ADDR_HI(a) ((a >> 16) & (~FPGA_WR_BIT))
+#define FPGA_ADDR_LO(a) (a & 0xFFFE)  // Do not allow odd addresses
 
 static irqreturn_t FVDIRQ1Service(int irq, void *dev_id);
 static irqreturn_t FVDIRQ2Service(int irq, void *dev_id);
@@ -284,12 +288,15 @@ void bifrost_membus_exit(struct bifrost_device *dev)
  */
 static void WriteSDRAM(struct bifrost_device *dev, u32 pSrc, u32 addr, u32 sz)
 {
-	// Prepare input data
-	addr >>= 2; // Adjust for 32 bit address
+	INFO("addr: hi %04x lo %04x len: 0x%x (%u)\n",
+	     FPGA_ADDR_HI(addr), FPGA_ADDR_LO(addr), sz, sz);
+
+	// SDRAM WR/RD-bit must be toggled to trig a new write
+	membus_write_device_memory(dev->regb[0].handle, 1, FPGA_RD_BIT);
 
 	// Set up SDRAM address register for write
-	membus_write_device_memory(dev->regb[0].handle, 0, addr & 0xFFF8);
-	membus_write_device_memory(dev->regb[0].handle, 1, (addr >> 16) | 0x8000);
+	membus_write_device_memory(dev->regb[0].handle, 0, FPGA_ADDR_LO(addr));
+	membus_write_device_memory(dev->regb[0].handle, 1, FPGA_ADDR_HI(addr) | FPGA_WR_BIT);
 
 	// Let FPGA prepare to receive data
 	udelay(FPGA_MEM_TIME);
@@ -309,12 +316,15 @@ static void WriteSDRAM(struct bifrost_device *dev, u32 pSrc, u32 addr, u32 sz)
  */
 static void ReadSDRAM(struct bifrost_device *dev, u32 pDst, u32 addr, u32 sz)
 {
-	// Prepare input data
-	addr >>= 2; // Adjust for 32 bit address
+	INFO("addr: hi %04x lo %04x len: 0x%x (%u)\n",
+	     FPGA_ADDR_HI(addr), FPGA_ADDR_LO(addr), sz, sz);
+
+	// SDRAM WR/RD-bit must be toggled to trig a new read
+	membus_write_device_memory(dev->regb[0].handle, 1, FPGA_WR_BIT);
 
 	// Set SDRAM address register
-	membus_write_device_memory(dev->regb[0].handle, 0, addr & 0xFFF8);
-	membus_write_device_memory(dev->regb[0].handle, 1, (addr >> 16) & 0x7FFF);
+	membus_write_device_memory(dev->regb[0].handle, 0, FPGA_ADDR_LO(addr));
+	membus_write_device_memory(dev->regb[0].handle, 1, FPGA_ADDR_HI(addr));
 
 	// Let FPGA prepare data
 	udelay(FPGA_MEM_TIME);
