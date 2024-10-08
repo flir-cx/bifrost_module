@@ -533,6 +533,12 @@ static irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
 		// Line time stamps
 		event.data.frame.frameSize = ((hd2>>8)&0xFF) | ((hd3&0xFF) << 8) | ((hd4&0xFFFF) << 16);
 	}
+	else if (((camtype & 0xFFFF) == 0x2A) ||  // EOCO
+	         ((camtype & 0xFFFF) == 0x26)) {  
+		membus_read_device_memory(dev->regb[0].handle, 0xb9, &bufNo); // last live IR buffer
+		// Fill in frame data
+		event.data.frame.frameNo = bufNo & 0xF;
+    }
 
 	// Indicate completion
 	event.type = BIFROST_EVENT_TYPE_IRQ;
