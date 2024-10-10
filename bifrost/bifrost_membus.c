@@ -102,6 +102,7 @@ static void init_device_memory(int n, struct device_memory *mem)
 	mem->wr = membus_write_device_memory;
 	mem->mset = set_mode_device_memory;
 	spin_lock_init(&mem->lock);
+	mutex_init(&mem->iolock);
 }
 
 static int map_device_memory(struct device_memory *mem)
@@ -146,6 +147,7 @@ static void unmap_device_memory(struct device_memory *mem)
 	if (mem->enabled)
 		iounmap(mem->addr);
 
+	mutex_destroy(&mem->iolock);
 	mem->enabled = 0;
 }
 

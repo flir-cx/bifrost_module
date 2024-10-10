@@ -123,6 +123,7 @@ struct device_memory {
 	void __iomem *addr;	/* Kernel logical address */
 	struct pci_dev *pdev;	/* Handle to PCI device struct */
 	spinlock_t lock;	/* Use this to make atomic changes */
+	struct mutex iolock;
 
 	/* Access functions */
 	void *handle;

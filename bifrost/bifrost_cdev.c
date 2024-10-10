@@ -623,9 +623,9 @@ int bifrost_do_xfer(struct bifrost_device *dev, void __user *uarg, struct bifros
 			if (rc < 0)
 				goto membus_free;
 		}
-		spin_lock(&mem->lock);
+		mutex_lock(&mem->iolock);
 		rc = do_membus_xfer(dev, &xfer, dir);
-		spin_unlock(&mem->lock);
+		mutex_unlock(&mem->iolock);
 		if (rc)
 			goto membus_free;
 		if (dir == BIFROST_DMA_DIRECTION_UP) {
