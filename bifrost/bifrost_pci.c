@@ -566,6 +566,46 @@ static void remove_io_regions(struct bifrost_device *bifrost)
 		unmap_device_memory(&bifrost->regb[n]);
 }
 
+/**
+ * Post init handles initialization of driver interfaces (frame buffer and
+ * character device) and the call to this function depends on whether driver
+ * is loaded with or without PCI support.
+ *
+ * Call this function last in during initialization because the driver will
+ * go "live" and allow access as soon as this function returns.
+ */
+int bifrost_pci_probe_post_init(struct pci_dev *pdev)
+{
+	int rc = 0, msi_irq;
+
+	INFO("\n");
+
+	msi_irq = pdev->irq;
+	rc = bifrost_attach_msis_to_irq(msi_irq, bdev);
+	if (rc < 0) {
+		ALERT("Failed to attch MSI vectors\n");
+		return rc;
+	}
+
+	rc = bifrost_dma_init(msi_irq, bdev);
+	if (rc < 0) {
+		ALERT("Failed to setup DMA\n");
+		goto err_dma;
+	}
+
+	if (platform_fvd() && bifrost_fvd_init(bdev) != 0)
+		goto err_alloc;
+
+
+	return 0;
+
+err_alloc:
+	bifrost_dma_cleanup(bdev);
+err_dma:
+	bifrost_detach_msis();
+	return -1;
+}
+
 int bifrost_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
 	int rc;
