@@ -37,7 +37,7 @@ static struct {
  * @param dev The handle to bifrost device instance.
  * @return 0 on success.
  */
-int bifrost_cdev_init(struct bifrost_device *dev)
+int bifrost_cdev_init(struct bifrost_device *bifrost)
 {
 	int rc;
 
@@ -54,11 +54,11 @@ int bifrost_cdev_init(struct bifrost_device *dev)
 	}
 
 	/* Init char device structure */
-	cdev_init(&dev->cdev, &bifrost_fops);
-	dev->cdev.owner = THIS_MODULE;
+	cdev_init(&bifrost->cdev, &bifrost_fops);
+	bifrost->cdev.owner = THIS_MODULE;
 
 	/* Register char device to kernel, and go "live" */
-	rc = cdev_add(&dev->cdev, bifrost_dev_no, 1);
+	rc = cdev_add(&bifrost->cdev, bifrost_dev_no, 1);
 	if (rc) {
 		unregister_chrdev_region(bifrost_dev_no, 1);
 		ALERT("cdev_add() failed: %d\n", rc);
@@ -68,7 +68,7 @@ int bifrost_cdev_init(struct bifrost_device *dev)
 	bdev->pClass = class_create(THIS_MODULE, BIFROST_DEVICE_NAME);
 	device_create(bdev->pClass, NULL, bdev->cdev.dev, NULL, "bif0");
 
-	dev->cdev_initialized = 1;
+	bifrost->cdev_initialized = 1;
 
 	return 0;
 }
@@ -78,22 +78,22 @@ int bifrost_cdev_init(struct bifrost_device *dev)
  *
  * @param dev The handle to bifrost device instance.
  */
-void __exit bifrost_cdev_exit(struct bifrost_device *dev)
+void __exit bifrost_cdev_exit(struct bifrost_device *bifrost)
 {
-	struct pci_dev *pcd_dev = dev->pdev;
+	struct pci_dev *pcd_dev = bifrost->pdev;
 
-	INFO("cdev_initialized=%d\n", dev->cdev_initialized);
-	if (dev->cdev_initialized == 0)
+	INFO("cdev_initialized=%d\n", bifrost->cdev_initialized);
+	if (bifrost->cdev_initialized == 0)
 		return;
 
 	if (saved_dma_buf.virt)
 		dma_free_coherent(&pcd_dev->dev, saved_dma_buf.size,
 				  saved_dma_buf.virt, saved_dma_buf.phy);
 
-	device_destroy(dev->pClass, dev->cdev.dev);
-	class_destroy(dev->pClass);
+	device_destroy(bifrost->pClass, bifrost->cdev.dev);
+	class_destroy(bifrost->pClass);
 
-	cdev_del(&dev->cdev);
+	cdev_del(&bifrost->cdev);
 	unregister_chrdev_region(bifrost_dev_no, 1);
 }
 
@@ -106,13 +106,13 @@ void __exit bifrost_cdev_exit(struct bifrost_device *dev)
  */
 static int bifrost_open(struct inode *inode, struct file *file)
 {
-	struct bifrost_device *dev;
+	struct bifrost_device *bifrost;
 	struct bifrost_user_handle *hnd;
 
 	INFO("\n");
 
 	/* get struct that contains this cdev */
-	dev = container_of(inode->i_cdev, struct bifrost_device, cdev);
+	bifrost = container_of(inode->i_cdev, struct bifrost_device, cdev);
 
 	hnd = kzalloc(sizeof(struct bifrost_user_handle), GFP_KERNEL);
 	if (hnd == NULL) {
@@ -121,7 +121,7 @@ static int bifrost_open(struct inode *inode, struct file *file)
 	}
 
 	/* initialize struct members */
-	hnd->dev = dev;
+	hnd->dev = bifrost;
 	INIT_LIST_HEAD(&hnd->event_list);
 	spin_lock_init(&hnd->event_list_lock);
 	hnd->event_list_count = 0;
@@ -131,9 +131,9 @@ static int bifrost_open(struct inode *inode, struct file *file)
 	 * Add this handle _first_ to list of user handles. Lock necessary
 	 * since the list may be used by interrupt handler
 	 */
-	spin_lock(&dev->lock_list);
-	list_add(&hnd->node, &dev->list);
-	spin_unlock(&dev->lock_list);
+	spin_lock(&bifrost->lock_list);
+	list_add(&hnd->node, &bifrost->list);
+	spin_unlock(&bifrost->lock_list);
 
 	/* allow access to user handle via file struct data pointer */
 	file->private_data = hnd;
@@ -151,7 +151,7 @@ static int bifrost_open(struct inode *inode, struct file *file)
 static int bifrost_release(struct inode *inode, struct file *file)
 {
 	struct bifrost_user_handle *hnd = file->private_data;
-	struct bifrost_device *dev = hnd->dev;
+	struct bifrost_device *bifrost = hnd->dev;
 	struct bifrost_event_cont *p;
 	struct list_head *pos, *tmp;
 
@@ -161,9 +161,9 @@ static int bifrost_release(struct inode *inode, struct file *file)
 	 * Remove this handle from list of user handles. Lock necessary
 	 * since the list may be used by interrupt handler
 	 */
-	spin_lock(&dev->lock_list);
+	spin_lock(&bifrost->lock_list);
 	list_del(&hnd->node);
-	spin_unlock(&dev->lock_list);
+	spin_unlock(&bifrost->lock_list);
 
 	spin_lock(&hnd->event_list_lock);
 	list_for_each_safe(pos, tmp, &hnd->event_list) {
@@ -270,7 +270,7 @@ static struct bifrost_event_cont *duplicate_event(struct bifrost_event *e,
  * @param dev The device handle.
  * @param event The event data.
  */
-void bifrost_create_event(struct bifrost_device *dev,
+void bifrost_create_event(struct bifrost_device *bifrost,
 			  struct bifrost_event *event)
 {
 	struct bifrost_user_handle *hnd;
@@ -283,8 +283,8 @@ void bifrost_create_event(struct bifrost_device *dev,
 	do_gettimeofday(&event->timestamp.received);
 #endif
 
-	spin_lock(&dev->lock_list);
-	list_for_each_safe(pos, tmp, &dev->list) {
+	spin_lock(&bifrost->lock_list);
+	list_for_each_safe(pos, tmp, &bifrost->list) {
 		hnd = list_entry(pos, struct bifrost_user_handle, node);
 		if (enqueue_on_this_handle(hnd, event)) {
 			p = duplicate_event(event, GFP_ATOMIC);
@@ -296,7 +296,7 @@ void bifrost_create_event(struct bifrost_device *dev,
 			}
 		}
 	}
-	spin_unlock(&dev->lock_list);
+	spin_unlock(&bifrost->lock_list);
 }
 
 
@@ -451,7 +451,7 @@ static int do_dma_start_xfer(struct dma_ctl *ctl,
 #define WR_ACCESS 0x2 /* Write */
 #define EV_ACCESS 0x4 /* Events */
 
-static int check_bar_access(struct bifrost_device *dev, int bar, int access,
+static int check_bar_access(struct bifrost_device *bifrost, int bar, int access,
 			    unsigned int offset)
 {
 	    /* In normal PCI mode, user-space doesn't have write access to BAR0 */
@@ -488,13 +488,13 @@ static int check_bar_access(struct bifrost_device *dev, int bar, int access,
 		v = -EINVAL;
 		goto e_exit;
 	}
-	if (!dev->regb[bar].enabled) {
+	if (!bifrost->regb[bar].enabled) {
 		v = -EFAULT; /* BAR is not mapped into memory */
 		goto e_exit;
 	}
 	if (platform_fvd())
 		mask = (access & user_space_bar_access_fvd[bar]);
-	else if (dev->membus)
+	else if (bifrost->membus)
 		mask = (access & user_space_membus_access[bar]);
 	else
 		mask = (access & user_space_bar_access[bar]);
@@ -503,7 +503,7 @@ static int check_bar_access(struct bifrost_device *dev, int bar, int access,
 		v = -EACCES; /* User hasn't sufficient access rights */
 		goto e_exit;
 	}
-	if (offset >= dev->regb[bar].size) {
+	if (offset >= bifrost->regb[bar].size) {
 		v = -EFAULT; /* Offset is out-of-range */
 		goto e_exit;
 	}
@@ -514,18 +514,18 @@ e_exit:
 	return v;
 }
 
-static int do_modify_regb(struct bifrost_device *dev, int bar, u32 offset,
+static int do_modify_regb(struct bifrost_device *bifrost, int bar, u32 offset,
 			  u32 clear, u32 set, u32 *value)
 {
 	struct device_memory *mem;
 	int rc;
 	u32 v;
 
-	rc = check_bar_access(dev, bar, (RD_ACCESS | WR_ACCESS), offset);
+	rc = check_bar_access(bifrost, bar, (RD_ACCESS | WR_ACCESS), offset);
 	if (rc < 0)
 		return rc;
 
-	mem = &dev->regb[bar];
+	mem = &bifrost->regb[bar];
 
 	/*
 	 * Note: these registers are only accessed from user-space and
@@ -552,20 +552,23 @@ e_exit:
 	return rc;
 }
 
-static int do_read_regb(struct bifrost_device *dev, int bar,
+static int do_read_regb(struct bifrost_device *bifrost, int bar,
 			unsigned int offset, unsigned int *value)
 {
 	struct device_memory *mem;
 	int v;
 
-	v = check_bar_access(dev, bar, RD_ACCESS, offset);
+	v = check_bar_access(bifrost, bar, RD_ACCESS, offset);
 	if (v < 0)
 		return v;
 
-	mem = &dev->regb[bar];
+
+	mem = &bifrost->regb[bar];
 	spin_lock(&mem->lock);
 	v = mem->rd(mem->handle, offset, value);
 	spin_unlock(&mem->lock);
+
+
 	if (v < 0)
 		return v;
 
@@ -574,17 +577,17 @@ static int do_read_regb(struct bifrost_device *dev, int bar,
 	return 0;
 }
 
-static int do_write_regb(struct bifrost_device *dev, int bar,
+static int do_write_regb(struct bifrost_device *bifrost, int bar,
 			 unsigned int offset, unsigned int value)
 {
 	struct device_memory *mem;
 	int v;
 
-	v = check_bar_access(dev, bar, WR_ACCESS, offset);
+	v = check_bar_access(bifrost, bar, WR_ACCESS, offset);
 	if (v < 0)
 		return v;
 
-	mem = &dev->regb[bar];
+	mem = &bifrost->regb[bar];
 	spin_lock(&mem->lock);
 	v = mem->wr(mem->handle, offset, value);
 	spin_unlock(&mem->lock);
@@ -596,7 +599,7 @@ static int do_write_regb(struct bifrost_device *dev, int bar,
 	return 0;
 }
 
-int bifrost_do_xfer(struct bifrost_device *dev, void __user *uarg, struct bifrost_user_handle *hnd, int flags, int dir)
+int bifrost_do_xfer(struct bifrost_device *bifrost, void __user *uarg, struct bifrost_user_handle *hnd, int flags, int dir)
 {
 	struct bifrost_dma_transfer xfer;
 	int rc;
@@ -608,10 +611,10 @@ int bifrost_do_xfer(struct bifrost_device *dev, void __user *uarg, struct bifros
 	 * Note: the user handle is used as cookie for DMA done event
 	 * matching.
 	 */
-	if (dev->membus) {
+	if (bifrost->membus) {
 		u8 *buf;
 		void __user *usr_mem = (void __user *)xfer.system;
-		struct device_memory *mem = &dev->regb[0];
+		struct device_memory *mem = &bifrost->regb[0];
 
 		buf = kcalloc(xfer.size, 1, GFP_KERNEL);
 		if (buf == NULL)
@@ -624,8 +627,9 @@ int bifrost_do_xfer(struct bifrost_device *dev, void __user *uarg, struct bifros
 				goto membus_free;
 		}
 		mutex_lock(&mem->iolock);
-		rc = do_membus_xfer(dev, &xfer, dir);
+		rc = do_membus_xfer(bifrost, &xfer, dir);
 		mutex_unlock(&mem->iolock);
+
 		if (rc)
 			goto membus_free;
 		if (dir == BIFROST_DMA_DIRECTION_UP) {
@@ -636,7 +640,7 @@ int bifrost_do_xfer(struct bifrost_device *dev, void __user *uarg, struct bifros
 membus_free:
 		kfree(buf);
 	} else {
-		rc = do_dma_start_xfer(dev->dma_ctl, &xfer, dir, hnd, flags);
+		rc = do_dma_start_xfer(bifrost->dma_ctl, &xfer, dir, hnd, flags);
 	}
 	if (rc >= 0) {
 		INFO("BIFROST_DMA_TRANSFER_%s: sys=%08lx, dev=%08x, len=%d\n",
@@ -658,17 +662,17 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
 				   unsigned long arg)
 {
 	struct bifrost_user_handle *hnd = file->private_data;
-	struct bifrost_device *dev = hnd->dev;
+	struct bifrost_device *bifrost = hnd->dev;
 	void __user *uarg = (void __user *)arg;
 	int rc = 0, flags = 0;
 
-	dev->stats.ioctls++;
+	bifrost->stats.ioctls++;
 
 	switch (cmd) {
 	case BIFROST_IOCTL_INFO:
 	{
 		INFO("BIFROST_IOCTL_INFO\n");
-		if (copy_to_user(uarg, &dev->info, sizeof(dev->info)))
+		if (copy_to_user(uarg, &bifrost->info, sizeof(bifrost->info)))
 			return -EFAULT;
 		break;
 	}
@@ -679,7 +683,7 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
 
 		if (copy_from_user(&a, uarg, sizeof(a)))
 			return -ENOMEM;
-		rc = do_read_regb(dev, a.bar, a.offset, &a.value);
+		rc = do_read_regb(bifrost, a.bar, a.offset, &a.value);
 		if (rc < 0)
 			return rc;
 		if (copy_to_user(uarg, &a, sizeof(a)))
@@ -704,7 +708,7 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
 			return -ENOMEM;
 
 		for (i = 0; i < a.count; ++i) {
-			rc = do_read_regb(dev, a.bar, a.offset + i * incr, &buf[i]);
+			rc = do_read_regb(bifrost, a.bar, a.offset + i * incr, &buf[i]);
 			if (rc < 0) {
 				kfree(buf);
 				return rc;
@@ -725,7 +729,7 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
 		if (copy_from_user(&a, uarg, sizeof(a)))
 			return -ENOMEM;
 
-		rc = do_write_regb(dev, a.bar, a.offset, a.value);
+		rc = do_write_regb(bifrost, a.bar, a.offset, a.value);
 		if (rc < 0)
 			return rc;
 		break;
@@ -748,7 +752,7 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
 			rc = -EFAULT;
 
 		for (i = 0; i < a.count; ++i) {
-			rc = do_write_regb(dev, a.bar, a.offset, buf[i]);
+			rc = do_write_regb(bifrost, a.bar, a.offset, buf[i]);
 			if (rc < 0) {
 				kfree(buf);
 				return rc;
@@ -765,7 +769,7 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
 
 		if (copy_from_user(&m, uarg, sizeof(m)))
 			return -EFAULT;
-		rc = do_modify_regb(dev, m.bar, m.offset, m.clear, m.set,
+		rc = do_modify_regb(bifrost, m.bar, m.offset, m.clear, m.set,
 				    &m.value);
 		if (rc < 0)
 			return rc;
@@ -776,17 +780,17 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
 
 	case BIFROST_IOCTL_START_DMA_UP_USER:
 		flags =  BIFROST_DMA_USER_BUFFER;
-		rc = bifrost_do_xfer(dev, uarg, hnd, flags, BIFROST_DMA_DIRECTION_UP);
+		rc = bifrost_do_xfer(bifrost, uarg, hnd, flags, BIFROST_DMA_DIRECTION_UP);
 		break;
 	case BIFROST_IOCTL_START_DMA_DOWN_USER:
 		flags =  BIFROST_DMA_USER_BUFFER;
-		rc = bifrost_do_xfer(dev, uarg, hnd, flags, BIFROST_DMA_DIRECTION_DOWN);
+		rc = bifrost_do_xfer(bifrost, uarg, hnd, flags, BIFROST_DMA_DIRECTION_DOWN);
 		break;
 	case BIFROST_IOCTL_START_DMA_UP:
-		rc = bifrost_do_xfer(dev, uarg, hnd, flags, BIFROST_DMA_DIRECTION_UP);
+		rc = bifrost_do_xfer(bifrost, uarg, hnd, flags, BIFROST_DMA_DIRECTION_UP);
 		break;
 	case BIFROST_IOCTL_START_DMA_DOWN:
-		rc = bifrost_do_xfer(dev, uarg, hnd, flags, BIFROST_DMA_DIRECTION_DOWN);
+		rc = bifrost_do_xfer(bifrost, uarg, hnd, flags, BIFROST_DMA_DIRECTION_DOWN);
 		break;
 
 	case BIFROST_IOCTL_ENABLE_EVENT:
@@ -835,11 +839,11 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
 
 		if (copy_from_user(&a, uarg, sizeof(a)))
 			return -ENOMEM;
-		rc = check_bar_access(dev, a.bar, EV_ACCESS, a.offset);
+		rc = check_bar_access(bifrost, a.bar, EV_ACCESS, a.offset);
 		if (rc < 0)
 			return rc;
-		h = dev->regb[a.bar].handle;
-		rc = dev->regb[a.bar].mset(h, a.offset, a.value);
+		h = bifrost->regb[a.bar].handle;
+		rc = bifrost->regb[a.bar].mset(h, a.offset, a.value);
 		if (rc < 0)
 			return rc;
 		INFO("BIFROST_IOCTL_SET_MODE_REGB%u %#08x=%#08x\n",

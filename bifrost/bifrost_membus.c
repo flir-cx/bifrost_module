@@ -173,7 +173,7 @@ static void remove_io_regions(struct bifrost_device *bifrost)
 		unmap_device_memory(&bifrost->regb[n]);
 }
 
-int __init bifrost_membus_init(struct bifrost_device *dev)
+int __init bifrost_membus_init(struct bifrost_device *bifrost)
 {
 	int rc;
 
@@ -184,7 +184,7 @@ int __init bifrost_membus_init(struct bifrost_device *dev)
 	if (rc < 2)
 		goto err_pci_iomap_regb;
 
-	if (bifrost_fvd_init(dev) != 0)
+	if (bifrost_fvd_init(bifrost) != 0)
 		goto err_pci_iomap_regb;
 
 	return 0;
@@ -272,18 +272,18 @@ err_platform_alloc:
 	return rc;
 }
 
-void bifrost_fvd_exit(struct bifrost_device *dev)
+void bifrost_fvd_exit(struct bifrost_device *bifrost)
 {
 	INFO("\n");
-	platform_device_unregister(dev->pMemDev);
+	platform_device_unregister(bifrost->pMemDev);
 }
 
-void bifrost_membus_exit(struct bifrost_device *dev)
+void bifrost_membus_exit(struct bifrost_device *bifrost)
 {
 	INFO("\n");
 
-	remove_io_regions(dev);
-	bifrost_fvd_exit(dev);
+	remove_io_regions(bifrost);
+	bifrost_fvd_exit(bifrost);
 }
 
 
@@ -295,23 +295,24 @@ void bifrost_membus_exit(struct bifrost_device *dev)
  * @param addr SDRAM byte offset
  * @param sz Number of bytes to write
  */
-static void WriteSDRAM(struct bifrost_device *dev, u32 pSrc, u32 addr, u32 sz)
+static void WriteSDRAM(struct bifrost_device *bifrost, u32 pSrc, u32 addr, u32 sz)
 {
 	INFO("addr: hi %04x lo %04x len: 0x%x (%u)\n",
 	     FPGA_ADDR_HI(addr), FPGA_ADDR_LO(addr), sz, sz);
 
 	// SDRAM WR/RD-bit must be toggled to trig a new write
-	membus_write_device_memory(dev->regb[0].handle, 1, FPGA_RD_BIT);
+	membus_write_device_memory(bifrost->regb[0].handle, 1, FPGA_RD_BIT);
 
 	// Set up SDRAM address register for write
-	membus_write_device_memory(dev->regb[0].handle, 0, FPGA_ADDR_LO(addr));
-	membus_write_device_memory(dev->regb[0].handle, 1, FPGA_ADDR_HI(addr) | FPGA_WR_BIT);
+
+	membus_write_device_memory(bifrost->regb[0].handle, 0, FPGA_ADDR_LO(addr));
+	membus_write_device_memory(bifrost->regb[0].handle, 1, FPGA_ADDR_HI(addr) | FPGA_WR_BIT);
 
 	// Let FPGA prepare to receive data
 	udelay(FPGA_MEM_TIME);
 
 	// Process main chunk data
-	fpgawrite(((struct device_memory *)dev->regb[1].handle)->addr, pSrc, sz);
+	fpgawrite(((struct device_memory *)bifrost->regb[1].handle)->addr, pSrc, sz);
 }
 
 
@@ -323,34 +324,34 @@ static void WriteSDRAM(struct bifrost_device *dev, u32 pSrc, u32 addr, u32 sz)
  * @param addr SDRAM byte offset
  * @param sz Number of bytes to read
  */
-static void ReadSDRAM(struct bifrost_device *dev, u32 pDst, u32 addr, u32 sz)
+static void ReadSDRAM(struct bifrost_device *bifrost, u32 pDst, u32 addr, u32 sz)
 {
 	INFO("addr: hi %04x lo %04x len: 0x%x (%u)\n",
 	     FPGA_ADDR_HI(addr), FPGA_ADDR_LO(addr), sz, sz);
 
 	// SDRAM WR/RD-bit must be toggled to trig a new read
-	membus_write_device_memory(dev->regb[0].handle, 1, FPGA_WR_BIT);
+	membus_write_device_memory(bifrost->regb[0].handle, 1, FPGA_WR_BIT);
 
 	// Set SDRAM address register
-	membus_write_device_memory(dev->regb[0].handle, 0, FPGA_ADDR_LO(addr));
-	membus_write_device_memory(dev->regb[0].handle, 1, FPGA_ADDR_HI(addr));
+	membus_write_device_memory(bifrost->regb[0].handle, 0, FPGA_ADDR_LO(addr));
+	membus_write_device_memory(bifrost->regb[0].handle, 1, FPGA_ADDR_HI(addr));
 
 	// Let FPGA prepare data
 	udelay(FPGA_MEM_TIME);
 
-	fpgaread(pDst, ((struct device_memory *)dev->regb[1].handle)->addr, sz);
+	fpgaread(pDst, ((struct device_memory *)bifrost->regb[1].handle)->addr, sz);
 }
 
-int do_membus_xfer(struct bifrost_device *dev,
+int do_membus_xfer(struct bifrost_device *bifrost,
 		   struct bifrost_dma_transfer *xfer,
 		   int up_down)
 {
 	switch (up_down) {
 	case BIFROST_DMA_DIRECTION_DOWN: /* system memory -> FPGA memory */
-		WriteSDRAM(dev, xfer->system, xfer->device, xfer->size);
+		WriteSDRAM(bifrost, xfer->system, xfer->device, xfer->size);
 		break;
 	case BIFROST_DMA_DIRECTION_UP: /* FPGA memory -> system memory */
-		ReadSDRAM(dev, xfer->system, xfer->device, xfer->size);
+		ReadSDRAM(bifrost, xfer->system, xfer->device, xfer->size);
 		break;
 	default:
 		return -EINVAL;
@@ -363,7 +364,7 @@ int do_membus_xfer(struct bifrost_device *dev,
  */
 irqreturn_t FVDInterruptService(int irq, void *dev_id)
 {
-	struct bifrost_device *dev = (struct bifrost_device *)dev_id;
+	struct bifrost_device *bifrost = (struct bifrost_device *)dev_id;
 	struct bifrost_event event;
 	u32 exec_status;
 
@@ -371,13 +372,13 @@ irqreturn_t FVDInterruptService(int irq, void *dev_id)
 	memset(&event, 0, sizeof(event));
 
 	// Clear interrupt by reading Execute Status Register
-	membus_read_device_memory(dev->regb[0].handle, 0x1C, &exec_status);
+	membus_read_device_memory(bifrost->regb[0].handle, 0x1C, &exec_status);
 
 	// Indicate completion
 	event.type = BIFROST_EVENT_TYPE_IRQ;
 	event.data.irq_source = 1;
 	event.data.irqstatus.value = exec_status;
-	bifrost_create_event_in_atomic(dev, &event);
+	bifrost_create_event_in_atomic(bifrost, &event);
 
 	return IRQ_HANDLED;
 }
@@ -387,7 +388,7 @@ irqreturn_t FVDInterruptService(int irq, void *dev_id)
  */
 static irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 {
-	struct bifrost_device *dev = (struct bifrost_device *)dev_id;
+	struct bifrost_device *bifrost = (struct bifrost_device *)dev_id;
 	struct bifrost_event event;
 	u32 vector, mask;
 
@@ -396,10 +397,10 @@ static irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 	INFO("Irq1 %d\n", irq);
 
 	// Read interrupt mask
-	membus_read_device_memory(dev->regb[0].handle, 0x38, &mask);
+	membus_read_device_memory(bifrost->regb[0].handle, 0x38, &mask);
 
 	// Read interrupt vector
-	membus_read_device_memory(dev->regb[0].handle, 0x37, &vector);
+	membus_read_device_memory(bifrost->regb[0].handle, 0x37, &vector);
 
 	// printk("irg1:0x%04x, vec:0x%04x mask:0x%04x\n", irq, vector, mask);
 
@@ -407,13 +408,13 @@ static irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 		// Indicate completion
 		event.type = BIFROST_EVENT_TYPE_IRQ;
 		event.data.irq_source = 0x40;
-		bifrost_create_event_in_atomic(dev, &event);
+		bifrost_create_event_in_atomic(bifrost, &event);
 	}
 	if (mask & vector & 0x20) {	  // HSI (BOB) irq
 		// Indicate completion
 		event.type = BIFROST_EVENT_TYPE_IRQ;
 		event.data.irq_source = 0x02;
-		bifrost_create_event_in_atomic(dev, &event);
+		bifrost_create_event_in_atomic(bifrost, &event);
 	}
 	if (mask & vector & 0x100) {  // JPEGLS irq
 		u32 frameNo, frameSize;
@@ -424,12 +425,12 @@ static irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 		event.data.irq_source = 0x04;
 
 		// Read interrupt mask
-		membus_read_device_memory(dev->regb[0].handle, 0x170, &frameNo);      // JLSLastBuffer
+		membus_read_device_memory(bifrost->regb[0].handle, 0x170, &frameNo);      // JLSLastBuffer
 
 		// Read interrupt vector
 		frameSizeReg += frameNo;
 
-		membus_read_device_memory(dev->regb[0].handle, frameSizeReg, &frameSize);    // JLSBufferSize
+		membus_read_device_memory(bifrost->regb[0].handle, frameSizeReg, &frameSize);    // JLSBufferSize
 		event.data.frame.frameNo = frameNo;
 		event.data.frame.frameSize = frameSize;
 #if KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE
@@ -446,14 +447,14 @@ static irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 
 		// printk("lastbuf:%d, size:%d\n", frameNo, frameSize);
 
-		bifrost_create_event_in_atomic(dev, &event);
+		bifrost_create_event_in_atomic(bifrost, &event);
 	}
 	if (mask & vector & 0x200) {  // DIO irq
 		u32 status = 0;
 		u32 camtype;
 
 		// Read camera type
-		membus_read_device_memory(dev->regb[0].handle, 0x23, &camtype);	 // Cam type
+		membus_read_device_memory(bifrost->regb[0].handle, 0x23, &camtype);	 // Cam type
 
 		// Indicate completion
 		event.type = BIFROST_EVENT_TYPE_IRQ;
@@ -461,17 +462,17 @@ static irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 
 		// Read digital input status
 		if ((camtype & 0xFFFF) == 0x8) // T1K
-			membus_read_device_memory(dev->regb[0].handle, 0x150, &status);  // Digital IN
+			membus_read_device_memory(bifrost->regb[0].handle, 0x150, &status);  // Digital IN
 		else if ((camtype & 0xFFFF) == 0x19) // EC501
-			membus_read_device_memory(dev->regb[0].handle, 0x152, &status);  // Digital IN
+			membus_read_device_memory(bifrost->regb[0].handle, 0x152, &status);  // Digital IN
 		else if ((camtype & 0xFFFF) == 0x1F) // EC501 i3
-			membus_read_device_memory(dev->regb[0].handle, 0x152, &status);  // Digital IN
+			membus_read_device_memory(bifrost->regb[0].handle, 0x152, &status);  // Digital IN
 
 		// printk("DIO irq status:%d\n", status);
 
 		event.data.irqstatus.value = status;
 
-		bifrost_create_event_in_atomic(dev, &event);
+		bifrost_create_event_in_atomic(bifrost, &event);
 	}
 	if (mask & vector & 0x400) {  // HSI cable irq
 		u32 hsi_state;
@@ -482,7 +483,7 @@ static irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 		event.data.irq_source = 0x10;
 
 		// Read interrupt mask
-		membus_read_device_memory(dev->regb[0].handle, 0x141, &hsi_state);  // HSI cable state
+		membus_read_device_memory(bifrost->regb[0].handle, 0x141, &hsi_state);  // HSI cable state
 		cable_state = !!!(hsi_state & 0x10);  // bit4 indicates cable link up or down.
 						      // '0' == link is up, '1' == link is down.
 
@@ -490,7 +491,7 @@ static irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
 
 		event.data.irqstatus.value = cable_state;
 
-		bifrost_create_event_in_atomic(dev, &event);
+		bifrost_create_event_in_atomic(bifrost, &event);
 	}
 
 	return IRQ_HANDLED;
@@ -501,7 +502,7 @@ static irqreturn_t FVDIRQ1Service(int irq, void *dev_id)
  */
 static irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
 {
-	struct bifrost_device *dev = (struct bifrost_device *)dev_id;
+	struct bifrost_device *bifrost = (struct bifrost_device *)dev_id;
 	struct bifrost_event event;
 	u32 camtype;
 	u32 bufNo, frameCnt, hd1, hd2, hd3, hd4, hd5;
@@ -509,18 +510,18 @@ static irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
 	memset(&event, 0, sizeof(event));
 
 	// Read camera type
-	membus_read_device_memory(dev->regb[0].handle, 0x23, &camtype);	 // Cam type
+	membus_read_device_memory(bifrost->regb[0].handle, 0x23, &camtype);	 // Cam type
 
 	if (((camtype & 0xFFFF) == 0x19) ||  // EC501
 	    ((camtype & 0xFFFF) == 0x1F)) {  // EC501 i3
 		// Read frame trig data and line stamp data
-		membus_read_device_memory(dev->regb[0].handle, 0xb9, &bufNo); // last live IR buffer
-		membus_read_device_memory(dev->regb[0].handle, 0x14E, &hd1);
-		membus_read_device_memory(dev->regb[0].handle, 0x14F, &hd2);
-		membus_read_device_memory(dev->regb[0].handle, 0x150, &hd3);
-		membus_read_device_memory(dev->regb[0].handle, 0x151, &hd4);
-		membus_read_device_memory(dev->regb[0].handle, 0x152, &hd5);
-		membus_read_device_memory(dev->regb[0].handle, 0x153, &frameCnt);
+		membus_read_device_memory(bifrost->regb[0].handle, 0xb9, &bufNo); // last live IR buffer
+		membus_read_device_memory(bifrost->regb[0].handle, 0x14E, &hd1);
+		membus_read_device_memory(bifrost->regb[0].handle, 0x14F, &hd2);
+		membus_read_device_memory(bifrost->regb[0].handle, 0x150, &hd3);
+		membus_read_device_memory(bifrost->regb[0].handle, 0x151, &hd4);
+		membus_read_device_memory(bifrost->regb[0].handle, 0x152, &hd5);
+		membus_read_device_memory(bifrost->regb[0].handle, 0x153, &frameCnt);
 
 		// Fill in frame data
 		event.data.frame.frameNo = bufNo & 0xF;
@@ -544,7 +545,7 @@ static irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
 	}
 	else if (((camtype & 0xFFFF) == 0x2A) ||  // EOCO
 	         ((camtype & 0xFFFF) == 0x26)) {  
-		membus_read_device_memory(dev->regb[0].handle, 0xb9, &bufNo); // last live IR buffer
+		membus_read_device_memory(bifrost->regb[0].handle, 0xb9, &bufNo); // last live IR buffer
 		// Fill in frame data
 		event.data.frame.frameNo = bufNo & 0xF;
     }
@@ -563,7 +564,7 @@ static irqreturn_t FVDIRQ2Service(int irq, void *dev_id)
 #else
 	getnstimeofday(&event.data.frame.time);
 #endif
-	bifrost_create_event_in_atomic(dev, &event);
+	bifrost_create_event_in_atomic(bifrost, &event);
 
 	return IRQ_HANDLED;
 }

@@ -189,27 +189,27 @@ struct bifrost_user_handle {
 
 int bifrost_pci_probe_post_init(struct pci_dev *pdev);
 
-int bifrost_pci_init(struct bifrost_device *dev);
-void bifrost_pci_exit(struct bifrost_device *dev);
-int bifrost_cdev_init(struct bifrost_device *dev);
-void bifrost_cdev_exit(struct bifrost_device *dev);
+int bifrost_pci_init(struct bifrost_device *bifrost);
+void bifrost_pci_exit(struct bifrost_device *bifrost);
+int bifrost_cdev_init(struct bifrost_device *bifrost);
+void bifrost_cdev_exit(struct bifrost_device *bifrost);
 
-void bifrost_create_event(struct bifrost_device *dev,
+void bifrost_create_event(struct bifrost_device *bifrost,
 			  struct bifrost_event *event);
-void bifrost_create_event_in_atomic(struct bifrost_device *dev,
+void bifrost_create_event_in_atomic(struct bifrost_device *bifrost,
 				    struct bifrost_event *event);
 
-int bifrost_attach_msis_to_irq(int hw_irq, struct bifrost_device *dev);
+int bifrost_attach_msis_to_irq(int hw_irq, struct bifrost_device *bifrost);
 void bifrost_detach_msis(void);
-int bifrost_dma_init(int hw_irq, struct bifrost_device *dev);
-void bifrost_dma_cleanup(struct bifrost_device *dev);
+int bifrost_dma_init(int hw_irq, struct bifrost_device *bifrost);
+void bifrost_dma_cleanup(struct bifrost_device *bifrost);
 
-int bifrost_membus_init(struct bifrost_device *dev);
-void bifrost_membus_exit(struct bifrost_device *dev);
-int do_membus_xfer(struct bifrost_device *dev, struct bifrost_dma_transfer *xfer, int up_down);
+int bifrost_membus_init(struct bifrost_device *bifrost);
+void bifrost_membus_exit(struct bifrost_device *bifrost);
+int do_membus_xfer(struct bifrost_device *bifrost, struct bifrost_dma_transfer *xfer, int up_down);
 irqreturn_t FVDInterruptService(int irq, void *dev_id);
-int  bifrost_fvd_init(struct bifrost_device *dev);
-void bifrost_fvd_exit(struct bifrost_device *dev);
+int  bifrost_fvd_init(struct bifrost_device *bifrost);
+void bifrost_fvd_exit(struct bifrost_device *bifrost);
 int membus_write_device_memory(void *handle, u32 offset, u32 value);
 int membus_read_device_memory(void *handle, u32 offset, u32 *value);
 

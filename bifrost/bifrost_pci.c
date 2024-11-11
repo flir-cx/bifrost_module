@@ -238,7 +238,7 @@ static int request_msi(struct msi_action *m, int hw_irq, int vec, void *data)
 	return request_irq(m->irq, m->handler, m->flags, m->name, m);
 }
 
-int bifrost_attach_msis_to_irq(int hw_irq, struct bifrost_device *dev)
+int bifrost_attach_msis_to_irq(int hw_irq, struct bifrost_device *bifrost)
 {
 	int n, v;
 
@@ -252,7 +252,7 @@ int bifrost_attach_msis_to_irq(int hw_irq, struct bifrost_device *dev)
 			continue; /* MSI already setup else where */
 
 		/* Note: All MSI interrupts are OR:ed into hw_irq! */
-		v = request_msi(&msi[n], hw_irq, n, dev);
+		v = request_msi(&msi[n], hw_irq, n, bifrost);
 		if (v != 0) {
 			ALERT("failed to attach MSI%u to IRQ%u, errno=%d\n",
 			      msi[n].msi_vec, msi[n].irq, v);
@@ -275,7 +275,7 @@ void bifrost_detach_msis(void)
 	}
 }
 
-int bifrost_dma_init(int irq, struct bifrost_device *dev)
+int bifrost_dma_init(int irq, struct bifrost_device *bifrost)
 {
 	int n, num_ch, idle_map;
 	struct device_memory *mem;
@@ -283,15 +283,15 @@ int bifrost_dma_init(int irq, struct bifrost_device *dev)
 
 	if (platform_rocky()) {
 		INFO("Rocky platform, Selecting bar 3\n");
-		dev->regb_dma = &dev->regb[3];
+		bifrost->regb_dma = &bifrost->regb[3];
 	} else if (platform_evander() || platform_eoco() || platform_ec702()) {
 		INFO("Evander/Eoco platform, Selecting bar 2\n");
-		dev->regb_dma = &dev->regb[2];
+		bifrost->regb_dma = &bifrost->regb[2];
 	} else {
 		INFO("Unknown platform, Selecting bar 0\n");
-		dev->regb_dma = &dev->regb[0];
+		bifrost->regb_dma = &bifrost->regb[0];
 	}
-	mem = dev->regb_dma;
+	mem = bifrost->regb_dma;
 
 	mem->rd(mem->handle, VALHALLA_ADDR_DMA_CAPABILITY, &val);
 	num_ch = val & 0xf;
@@ -299,9 +299,9 @@ int bifrost_dma_init(int irq, struct bifrost_device *dev)
 	mem->rd(mem->handle, VALHALLA_ADDR_DMA_STATUS, &val);
 	idle_map = ~val & ((1 << num_ch) - 1);
 
-	dev->dma_ctl = alloc_dma_ctl(num_ch, idle_map, bifrost_dma_chan_start,
-				     dev);
-	if (dev->dma_ctl == NULL)
+	bifrost->dma_ctl = alloc_dma_ctl(num_ch, idle_map, bifrost_dma_chan_start,
+				     bifrost);
+	if (bifrost->dma_ctl == NULL)
 		return -ENOMEM;
 
 	/*
@@ -309,29 +309,29 @@ int bifrost_dma_init(int irq, struct bifrost_device *dev)
 	 *	 starting at irq
 	 */
 	for (n = 0; n < num_ch; n++)
-		enable_dma_ch(dev->dma_ctl, n, irq + n);
+		enable_dma_ch(bifrost->dma_ctl, n, irq + n);
 
 	return 0;
 }
 
-void bifrost_dma_cleanup(struct bifrost_device *dev)
+void bifrost_dma_cleanup(struct bifrost_device *bifrost)
 {
 	int n;
 	int num_ch=8;
 
-	if (dev->dma_ctl == NULL)
+	if (bifrost->dma_ctl == NULL)
 		return;
 
 	for (n = 0; n < num_ch; n++)
-		disable_dma_ch(dev->dma_ctl, n);
-	free_dma_ctl(dev->dma_ctl);
+		disable_dma_ch(bifrost->dma_ctl, n);
+	free_dma_ctl(bifrost->dma_ctl);
 }
 
 /**
  * Initialize PCI parts of driver. The probe function will be called by the
  * Linux PCI framework and takes care of most device initializations.
  */
-int __init bifrost_pci_init(struct bifrost_device *dev)
+int __init bifrost_pci_init(struct bifrost_device *bifrost)
 {
 	int rc;
 
@@ -349,7 +349,7 @@ int __init bifrost_pci_init(struct bifrost_device *dev)
 /**
  * Clean up PCI parts of driver
  */
-void bifrost_pci_exit(struct bifrost_device *dev)
+void bifrost_pci_exit(struct bifrost_device *bifrost)
 {
 	INFO("\n");
 	pci_unregister_driver(&bifrost_pci_driver);
@@ -357,29 +357,29 @@ void bifrost_pci_exit(struct bifrost_device *dev)
 
 static irqreturn_t fvd_msi_handler(int irq, void *dev_id)
 {
-	struct bifrost_device *dev = get_msi_data(dev_id);
+	struct bifrost_device *bifrost = get_msi_data(dev_id);
 
-	return FVDInterruptService(irq, dev);
+	return FVDInterruptService(irq, bifrost);
 
 }
 
 static irqreturn_t dma_msi_handler(int irq, void *dev_id)
 {
-	struct bifrost_device *dev;
+	struct bifrost_device *bifrost;
 	struct bifrost_event event;
 	unsigned int ticket;
 	void *cookie;
 	s64 xfer_time;
 
-	dev = get_msi_data(dev_id);
+	bifrost = get_msi_data(dev_id);
 
-	cookie = dma_done(dev->dma_ctl, irq, &ticket, &xfer_time, dev);
+	cookie = dma_done(bifrost->dma_ctl, irq, &ticket, &xfer_time, bifrost);
 	if (!IS_ERR(cookie)) {
 		event.type = BIFROST_EVENT_TYPE_DMA_DONE;
 		event.data.dma.id = ticket;
 		event.data.dma.time = xfer_time;
 		event.data.dma.cookie = (u64)(unsigned long)cookie;
-		bifrost_create_event_in_atomic(dev, &event);
+		bifrost_create_event_in_atomic(bifrost, &event);
 	}
 
 	return IRQ_HANDLED;
@@ -387,16 +387,16 @@ static irqreturn_t dma_msi_handler(int irq, void *dev_id)
 
 static irqreturn_t default_msi_handler(int irq, void *dev_id)
 {
-	struct bifrost_device *dev = get_msi_data(dev_id);
+	struct bifrost_device *bifrost = get_msi_data(dev_id);
 	unsigned int vec = get_msi_vector(dev_id);
 	struct bifrost_event event;
 
-	if (!dev)
+	if (!bifrost)
 		return IRQ_NONE;
 
 	event.type = BIFROST_EVENT_TYPE_IRQ;
 	event.data.irq_source = map_msi_to_event(vec);
-	bifrost_create_event_in_atomic(dev, &event);
+	bifrost_create_event_in_atomic(bifrost, &event);
 
 	return IRQ_HANDLED;
 }

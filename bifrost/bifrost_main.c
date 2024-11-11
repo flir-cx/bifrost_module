@@ -44,8 +44,8 @@ MODULE_PARM_DESC(membus, "Enable memory bus interface to FPGA (instead of PCI)")
 void bifrost_dma_chan_start(void *data, u32 ch, u32 src, u32 dst, u32 len,
 			    u32 dir)
 {
-	struct bifrost_device *dev = data;
-	struct device_memory *mem = dev->regb_dma;
+	struct bifrost_device *bifrost = data;
+	struct device_memory *mem = bifrost->regb_dma;
 	unsigned long flags;
 
 	spin_lock_irqsave(&mem->lock, flags);
@@ -136,7 +136,7 @@ static void work_create_event(struct work_struct *work)
 	mempool_free(w, work_pool);
 }
 
-void bifrost_create_event_in_atomic(struct bifrost_device *dev,
+void bifrost_create_event_in_atomic(struct bifrost_device *bifrost,
 				    struct bifrost_event *event)
 {
 	struct bifrost_work *w;
@@ -148,7 +148,7 @@ void bifrost_create_event_in_atomic(struct bifrost_device *dev,
 	}
 
 	INIT_WORK(&w->work, work_create_event);
-	w->dev = dev;
+	w->dev = bifrost;
 	memcpy(&w->event, event, sizeof(*event));
 	queue_work(work_queue, &w->work);
 }
