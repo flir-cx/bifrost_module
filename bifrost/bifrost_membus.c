@@ -23,6 +23,7 @@
 #include <asm/byteorder.h>
 #include <asm/atomic.h>
 #include <asm/gpio.h>
+#include <linux/gpio.h>
 
 #include "bifrost.h"
 #include "bifrost_dma.h"
@@ -194,9 +195,11 @@ err_pci_iomap_regb:
 	return -ENODEV;
 }
 
-int  bifrost_fvd_init(struct bifrost_device *dev)
+int  bifrost_fvd_init(struct bifrost_device *bifrost)
 {
 	int rc;
+	struct device *dev;
+
 	// Register platform driver
 	bdev->pMemDev = platform_device_alloc(BIFROST_DEVICE_NAME, 1);
 	if (bdev->pMemDev == NULL) {
@@ -205,65 +208,73 @@ int  bifrost_fvd_init(struct bifrost_device *dev)
 	}
 	platform_device_add(bdev->pMemDev);
 
-	if (gpio_is_valid(FPGA_IRQ_0) == 0)
+	dev = &bdev->pMemDev->dev;
+
+	if (gpio_is_valid(FPGA_IRQ_0) == 0) {
 		ALERT("FPGA_IRQ_0 can not be used\n");
+		goto err_gpio;
+	}
 
-	gpio_request(FPGA_IRQ_0, "FpgaIrq0");
-	gpio_direction_input(FPGA_IRQ_0);
+	rc = devm_gpio_request(dev, FPGA_IRQ_0, "FpgaIrq0");
+	rc = gpio_direction_input(FPGA_IRQ_0);
 
-	rc = request_irq(gpio_to_irq(FPGA_IRQ_0), FVDInterruptService,
+	rc = devm_request_irq(dev, gpio_to_irq(FPGA_IRQ_0), FVDInterruptService,
 			 IRQF_TRIGGER_FALLING, "FpgaIrq0", bdev);
 
-	if (rc != 0)
+	if (rc) {
 		ALERT("Failed to request FPGA IRQ (%d)\n", rc);
-	else
+		goto err_gpio;
+	} else {
 		INFO("Successfully requested FPGA IRQ\n");
+	}
 
-	if (gpio_is_valid(FPGA_IRQ_1) == 0)
+	if (gpio_is_valid(FPGA_IRQ_1) == 0) {
 		ALERT("FPGA_IRQ_1 can not be used\n");
+		goto err_gpio;
+	}
 
-	gpio_request(FPGA_IRQ_1, "FpgaIrq1");
-	gpio_direction_input(FPGA_IRQ_1);
+	rc = devm_gpio_request(dev, FPGA_IRQ_1, "FpgaIrq1");
+	rc = gpio_direction_input(FPGA_IRQ_1);
 
-	rc = request_irq(gpio_to_irq(FPGA_IRQ_1), FVDIRQ1Service,
+	rc = devm_request_irq(dev, gpio_to_irq(FPGA_IRQ_1), FVDIRQ1Service,
 			 IRQF_TRIGGER_FALLING, "FpgaIrq1", bdev);
 
-	if (rc != 0)
+	if (rc) {
 		ALERT("Failed to request FPGA IRQ1 (%d)\n", rc);
-	else
+		goto err_gpio;
+	} else {
 		INFO("Successfully requested FPGA IRQ1\n");
+	}
 
-	if (gpio_is_valid(FPGA_IRQ_2) == 0)
+	if (gpio_is_valid(FPGA_IRQ_2) == 0) {
 		ALERT("FPGA_IRQ_2 can not be used\n");
+		goto err_gpio;
+	}
 
-	gpio_request(FPGA_IRQ_2, "FpgaIrq2");
+	devm_gpio_request(dev, FPGA_IRQ_2, "FpgaIrq2");
 	gpio_direction_input(FPGA_IRQ_2);
 
-	rc = request_irq(gpio_to_irq(FPGA_IRQ_2), FVDIRQ2Service,
+	rc = devm_request_irq(dev, gpio_to_irq(FPGA_IRQ_2), FVDIRQ2Service,
 			 IRQF_TRIGGER_FALLING, "FpgaIrq2", bdev);
 
-	if (rc != 0)
+	if (rc) {
 		ALERT("Failed to request FPGA IRQ2 (%d)\n", rc);
-	else
+		goto err_gpio;
+	} else {
 		INFO("Successfully requested FPGA IRQ2\n");
+	}
 
 	return 0;
 
+err_gpio:
+	platform_device_unregister(bifrost->pMemDev);
 err_platform_alloc:
-	return -ENODEV;
-
+	return rc;
 }
 
 void bifrost_fvd_exit(struct bifrost_device *dev)
 {
 	INFO("\n");
-
-	free_irq(gpio_to_irq(FPGA_IRQ_0), bdev);
-	gpio_free(FPGA_IRQ_0);
-	free_irq(gpio_to_irq(FPGA_IRQ_1), bdev);
-	gpio_free(FPGA_IRQ_1);
-	free_irq(gpio_to_irq(FPGA_IRQ_2), bdev);
-	gpio_free(FPGA_IRQ_2);
 	platform_device_unregister(dev->pMemDev);
 }
 

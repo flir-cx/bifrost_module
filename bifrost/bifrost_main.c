@@ -194,11 +194,9 @@ static int __init bifrost_init(void)
 	if (bdev->membus) {
 		/* register as real Membus driver */
 		if (bifrost_membus_init(bdev) != 0) {
-			bifrost_membus_exit(bdev);
 			goto err_pci;
 		}
 	} else {
-
 		/* register as real PCI driver */
 		if (bifrost_pci_init(bdev) != 0)
 			goto err_pci;
