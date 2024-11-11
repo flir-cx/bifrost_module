@@ -108,7 +108,7 @@ err_dma:
 
 struct bifrost_work {
 	struct work_struct work;
-	struct bifrost_device *dev;
+	struct bifrost_device *bifrost;
 	struct bifrost_event event;
 };
 
@@ -132,7 +132,7 @@ static void work_create_event(struct work_struct *work)
 	struct bifrost_work *w;
 
 	w = container_of(work, struct bifrost_work, work);
-	bifrost_create_event(w->dev, &w->event);
+	bifrost_create_event(w->bifrost, &w->event);
 	mempool_free(w, work_pool);
 }
 
@@ -148,7 +148,7 @@ void bifrost_create_event_in_atomic(struct bifrost_device *bifrost,
 	}
 
 	INIT_WORK(&w->work, work_create_event);
-	w->dev = bifrost;
+	w->bifrost = bifrost;
 	memcpy(&w->event, event, sizeof(*event));
 	queue_work(work_queue, &w->work);
 }
