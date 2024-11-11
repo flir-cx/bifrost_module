@@ -183,10 +183,6 @@ int __init bifrost_membus_init(struct bifrost_device *dev)
 	if (rc < 2)
 		goto err_pci_iomap_regb;
 
-	/* Run post init and make driver accessible */
-	if (bifrost_cdev_init(bdev) != 0)
-		goto err_pci_iomap_regb;
-
 	if (bifrost_fvd_init(dev) != 0)
 		goto err_pci_iomap_regb;
 
