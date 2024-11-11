@@ -352,6 +352,7 @@ int __init bifrost_pci_init(struct bifrost_device *bifrost)
 void bifrost_pci_exit(struct bifrost_device *bifrost)
 {
 	INFO("\n");
+	bifrost_dma_cleanup(bdev);
 	pci_unregister_driver(&bifrost_pci_driver);
 }
 

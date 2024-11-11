@@ -226,7 +226,6 @@ static void __exit bifrost_exit(void)
 {
 	INFO("exit\n");
 	bifrost_cdev_exit(bdev);
-	bifrost_dma_cleanup(bdev);
 
 	if (bdev->membus)
 		bifrost_membus_exit(bdev);
