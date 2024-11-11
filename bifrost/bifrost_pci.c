@@ -30,7 +30,7 @@
 #include "bifrost_platform.h"
 
 
-extern void bifrost_dma_chan_start(void *data, u32 ch, u32 src, u32 dst,
+void bifrost_dma_chan_start(void *data, u32 ch, u32 src, u32 dst,
 				   u32 len, u32 dir);
 
 /* x86 doesn't define this */
@@ -60,6 +60,26 @@ struct msi_action {
 	irq_handler_t handler;
 	void *data;
 };
+void bifrost_dma_chan_start(void *data, u32 ch, u32 src, u32 dst, u32 len,
+			    u32 dir)
+{
+	struct bifrost_device *bifrost = data;
+	struct device_memory *mem = bifrost->regb_dma;
+	unsigned long flags;
+
+	spin_lock_irqsave(&mem->lock, flags);
+
+	mem->wr(mem->handle, VALHALLA_ADDR_DMA_CHAN, ch);
+	smp_wmb();
+	mem->wr(mem->handle, VALHALLA_ADDR_DMA_SRC_ADDR, src);
+	mem->wr(mem->handle, VALHALLA_ADDR_DMA_DEST_ADDR, dst);
+	mem->wr(mem->handle, VALHALLA_ADDR_DMA_DIR_UP_STRM, dir);
+	mem->wr(mem->handle, VALHALLA_ADDR_DMA_LEN_BYTES, len);
+	smp_wmb();
+	mem->wr(mem->handle, VALHALLA_ADDR_DMA_START, 1);
+
+	spin_unlock_irqrestore(&mem->lock, flags);
+}
 
 static inline void *get_msi_data(void *p)
 {
