@@ -17,7 +17,6 @@
 #include <linux/poll.h>
 #include <linux/errno.h>
 #include <linux/mm.h>
-#include <linux/pci.h>
 #include <linux/interrupt.h>
 #include <linux/time.h>
 #include <linux/version.h>

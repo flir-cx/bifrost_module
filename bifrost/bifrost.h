@@ -158,6 +158,7 @@ struct bifrost_device {
 	int membus;
 	struct platform_device *pMemDev;
 	struct class *pClass;
+        struct device *dev;
 };
 extern struct bifrost_device *bdev;
 

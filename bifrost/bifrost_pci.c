@@ -719,10 +719,10 @@ int bifrost_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	}
 #endif
 
-	/* store private data pointer */
-	pci_set_drvdata(pdev, NULL);
-
 	bdev->pdev = pdev;
+	bdev->dev = &pdev->dev;
+	dev_set_drvdata(bdev->dev, bdev);
+	pci_set_drvdata(pdev, bdev);
 
 	return 0;
 
@@ -755,7 +755,6 @@ void bifrost_pci_remove(struct pci_dev *pdev)
 	pci_iounmap(pdev, bdev->ddr.addr);
 	pci_release_regions(pdev);
 	pci_disable_device(pdev);
-	pci_set_drvdata(pdev, NULL);
 }
 
 struct pci_device_id bifrost_pci_device_table[] = {

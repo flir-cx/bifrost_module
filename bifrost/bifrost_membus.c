@@ -182,15 +182,15 @@ int __init bifrost_membus_init(struct bifrost_device *bifrost)
 	/* Gain CPU access to FPGA register map */
 	rc = setup_io_regions(bdev);
 	if (rc < 2)
-		goto err_pci_iomap_regb;
+		goto err_ioregions;
 
 	if (bifrost_fvd_init(bifrost) != 0)
-		goto err_pci_iomap_regb;
+		goto err_ioregions;
 
 	return 0;
 
 	/* stack-like cleanup on error */
-err_pci_iomap_regb:
+err_ioregions:
 	remove_io_regions(bdev);
 	return -ENODEV;
 }
@@ -209,6 +209,9 @@ int  bifrost_fvd_init(struct bifrost_device *bifrost)
 	platform_device_add(bdev->pMemDev);
 
 	dev = &bdev->pMemDev->dev;
+	bdev->dev = dev;
+	dev_set_drvdata(dev, bifrost);
+	platform_set_drvdata(bdev->pMemDev, bifrost);
 
 	if (gpio_is_valid(FPGA_IRQ_0) == 0) {
 		ALERT("FPGA_IRQ_0 can not be used\n");
