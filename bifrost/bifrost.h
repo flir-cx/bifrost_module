@@ -176,7 +176,7 @@ struct bifrost_event_cont {
  */
 struct bifrost_user_handle {
 	struct list_head node;		  /* list of user handles open to Bifrost */
-	struct bifrost_device *dev;
+	struct bifrost_device *bifrost;
 	wait_queue_head_t waitq;	  /* wait queue used by poll */
 	u32 event_enable_mask;
 	u32 irq_forwarding_mask;

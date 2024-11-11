@@ -121,7 +121,7 @@ static int bifrost_open(struct inode *inode, struct file *file)
 	}
 
 	/* initialize struct members */
-	hnd->dev = bifrost;
+	hnd->bifrost = bifrost;
 	INIT_LIST_HEAD(&hnd->event_list);
 	spin_lock_init(&hnd->event_list_lock);
 	hnd->event_list_count = 0;
@@ -151,7 +151,7 @@ static int bifrost_open(struct inode *inode, struct file *file)
 static int bifrost_release(struct inode *inode, struct file *file)
 {
 	struct bifrost_user_handle *hnd = file->private_data;
-	struct bifrost_device *bifrost = hnd->dev;
+	struct bifrost_device *bifrost = hnd->bifrost;
 	struct bifrost_event_cont *p;
 	struct list_head *pos, *tmp;
 
@@ -306,7 +306,7 @@ int finish_dma_buffer(struct dma_usr_req *usr_req)
 	dma_addr_t bus_addr = usr_req->bus_addr;
 	__u32 size = usr_req->size;
 	struct bifrost_user_handle *hnd = usr_req->cookie;
-	struct pci_dev *dev = hnd->dev->pdev;
+	struct pci_dev *dev = hnd->bifrost->pdev;
 	void *dev_buff = usr_req->dev_buff;
 	int ret = wait_for_completion_timeout(&usr_req->work, msecs_to_jiffies(1000));
 
@@ -344,7 +344,7 @@ int prepare_dma_buffer(struct bifrost_dma_transfer *xfer, struct dma_req *req,
 {
 	__u32 size = usr_req->size = xfer->size;
 	struct bifrost_user_handle *hnd = usr_req->cookie = req->cookie;
-	struct pci_dev *dev = hnd->dev->pdev;
+	struct pci_dev *dev = hnd->bifrost->pdev;
 	dma_addr_t bus_addr = 0;
 
 	if (size == 0)
@@ -662,7 +662,7 @@ static long bifrost_unlocked_ioctl(struct file *file, unsigned int cmd,
 				   unsigned long arg)
 {
 	struct bifrost_user_handle *hnd = file->private_data;
-	struct bifrost_device *bifrost = hnd->dev;
+	struct bifrost_device *bifrost = hnd->bifrost;
 	void __user *uarg = (void __user *)arg;
 	int rc = 0, flags = 0;
 
