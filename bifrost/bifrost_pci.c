@@ -284,7 +284,7 @@ int bifrost_dma_init(int irq, struct bifrost_device *dev)
 	if (platform_rocky()) {
 		INFO("Rocky platform, Selecting bar 3\n");
 		dev->regb_dma = &dev->regb[3];
-	} else if (platform_evander() || platform_eoco()) {
+	} else if (platform_evander() || platform_eoco() || platform_ec702()) {
 		INFO("Evander/Eoco platform, Selecting bar 2\n");
 		dev->regb_dma = &dev->regb[2];
 	} else {

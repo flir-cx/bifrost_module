@@ -11,5 +11,6 @@ extern bool platform_fvd(void);
 extern bool platform_evander(void);
 extern bool platform_rocky(void);
 extern bool platform_eoco(void);
+extern bool platform_ec702(void);
 
 #endif

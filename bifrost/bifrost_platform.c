@@ -25,9 +25,14 @@ bool platform_eoco(void)
 	return of_machine_is_compatible("fsl,imx6qp-eoco");
 }
 
+bool platform_ec702(void)
+{
+	return of_machine_is_compatible("fsl,imx6qp-ec702");
+}
+
 bool platform_fvd(void)
 {
-	return platform_rocky() || platform_evander() || platform_eoco();
+	return platform_rocky() || platform_evander() || platform_eoco() || platform_ec702();
 }
 
 #elif (KERNEL_VERSION(3, 10, 0) <= LINUX_VERSION_CODE)
@@ -66,7 +71,7 @@ bool platform_evander(void)
 
 bool platform_fvd(void)
 {
-	return platform_rocky() || platform_evander();
+	return platform_rocky() || platform_evander() || platform_ec702();
 }
 
 
